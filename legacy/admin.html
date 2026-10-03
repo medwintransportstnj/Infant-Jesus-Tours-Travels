@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — Infant Jesus Tours & Travels</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: { display: ['Sora','sans-serif'], body: ['Inter','sans-serif'] },
+        colors: { brand: { 400:'#F87171', 500:'#EF4444', 600:'#DC2626', 700:'#B91C1C' } },
+      }
+    }
+  }
+</script>
+<link rel="stylesheet" href="admin.css">
+</head>
+<body class="bg-white dark:bg-black text-gray-900 dark:text-gray-200 antialiased">
+
+<!-- ============ ADMIN LOGIN GATE ============ -->
+<div id="admin-gate" class="min-h-screen flex items-center justify-center px-5">
+  <div class="bg-gray-50 dark:bg-gray-900 border border-black/10 dark:border-white/10 rounded-3xl shadow-2xl p-8 max-w-sm w-full">
+    <div class="flex items-center gap-2.5 mb-1">
+      <i class="fa-solid fa-lock text-brand-600 dark:text-brand-500 text-lg"></i>
+      <h3 class="font-display font-bold text-xl text-gray-900 dark:text-white">Admin Login</h3>
+    </div>
+    <p class="text-xs text-gray-500 mb-5">Demo passcode: <strong class="font-mono">admin123</strong> — a real deployment needs proper server-side authentication here instead.</p>
+    <input id="admin-pass" type="password" placeholder="Passcode" onkeydown="if(event.key==='Enter') adminLoginAttempt()" class="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-3 text-sm outline-none focus:border-brand-600 mb-3">
+    <div id="admin-gate-error" class="text-xs text-red-500 mb-3"></div>
+    <div class="flex gap-3">
+      <a href="index.html" class="flex-1 text-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 font-semibold py-2.5 rounded-xl">Cancel</a>
+      <button onclick="adminLoginAttempt()" class="flex-1 bg-brand-600 hover:bg-brand-500 text-white font-bold py-2.5 rounded-xl">Enter</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ADMIN APP ============ -->
+<div id="admin-app" class="hidden flex min-h-screen">
+
+  <aside id="sidebar" class="fixed lg:sticky top-0 left-0 z-40 h-screen w-64 shrink-0 bg-gray-50 dark:bg-gray-950 border-r border-black/5 dark:border-white/5 overflow-y-auto">
+    <div class="flex items-center gap-3 px-5 h-16 sm:h-20 border-b border-black/5 dark:border-white/5">
+      <span class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 grid place-items-center shrink-0"><i class="fa-solid fa-cross text-white text-sm"></i></span>
+      <span class="leading-tight">
+        <span class="block font-display font-bold text-gray-900 dark:text-white text-[12px] tracking-wide">INFANT JESUS</span>
+        <span class="block font-display font-semibold text-brand-600 dark:text-brand-500 text-[8px] tracking-[0.2em]">TOURS &amp; TRAVELS</span>
+      </span>
+    </div>
+
+    <nav class="px-3 py-5 flex flex-col gap-5">
+      <div>
+        <div class="px-3 text-[10px] font-bold tracking-[0.15em] text-gray-500 uppercase mb-2">Main</div>
+        <div class="flex flex-col gap-1">
+          <div class="nav-item active" data-panel="dashboard" onclick="showPanel('dashboard')"><i class="fa-solid fa-gauge w-4"></i> Dashboard</div>
+          <div class="nav-item" data-panel="bookings" onclick="showPanel('bookings')"><i class="fa-solid fa-calendar-days w-4"></i> Bookings &amp; Enquiries</div>
+          <div class="nav-item" data-panel="vehicles" onclick="showPanel('vehicles')"><i class="fa-solid fa-car w-4"></i> Vehicles</div>
+          <div class="nav-item" data-panel="packages" onclick="showPanel('packages')"><i class="fa-solid fa-box-open w-4"></i> Packages</div>
+          <div class="nav-item" data-panel="destinations" onclick="showPanel('destinations')"><i class="fa-solid fa-map-location-dot w-4"></i> Destinations</div>
+          <div class="nav-item" data-panel="offers" onclick="showPanel('offers')"><i class="fa-solid fa-tag w-4"></i> Offers</div>
+          <div class="nav-item" data-panel="pages" onclick="showPanel('pages')"><i class="fa-solid fa-file-lines w-4"></i> Pages</div>
+          <div class="nav-item" data-panel="gallery" onclick="showPanel('gallery')"><i class="fa-solid fa-images w-4"></i> Gallery</div>
+          <div class="nav-item" data-panel="testimonials" onclick="showPanel('testimonials')"><i class="fa-solid fa-quote-left w-4"></i> Testimonials</div>
+          <div class="nav-item" data-panel="contacts" onclick="showPanel('contacts')"><i class="fa-solid fa-envelope w-4"></i> Contacts</div>
+          <div class="nav-item" data-panel="notifications" onclick="showPanel('notifications')">
+            <i class="fa-solid fa-bell w-4"></i> Notifications
+            <span id="notif-badge" class="ml-auto hidden bg-brand-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">0</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="px-3 text-[10px] font-bold tracking-[0.15em] text-gray-500 uppercase mb-2">Settings</div>
+        <div class="flex flex-col gap-1">
+          <div class="nav-item" data-panel="website-settings" onclick="showPanel('website-settings')"><i class="fa-solid fa-gear w-4"></i> Website Settings</div>
+          <div class="nav-item" data-panel="social-links" onclick="showPanel('social-links')"><i class="fa-brands fa-whatsapp w-4"></i> WhatsApp &amp; Social</div>
+          <div class="nav-item" data-panel="seo-settings" onclick="showPanel('seo-settings')"><i class="fa-solid fa-magnifying-glass-chart w-4"></i> SEO Settings</div>
+          <div class="nav-item" data-panel="theme-settings" onclick="showPanel('theme-settings')"><i class="fa-solid fa-palette w-4"></i> Theme Settings</div>
+        </div>
+      </div>
+      <div>
+        <div class="px-3 text-[10px] font-bold tracking-[0.15em] text-gray-500 uppercase mb-2">Admin</div>
+        <div class="flex flex-col gap-1">
+          <div class="nav-item" data-panel="admins" onclick="showPanel('admins')"><i class="fa-solid fa-user-shield w-4"></i> Admins</div>
+          <div class="nav-item" onclick="adminLogout()"><i class="fa-solid fa-arrow-right-from-bracket w-4"></i> Logout</div>
+        </div>
+      </div>
+    </nav>
+  </aside>
+
+  <div id="sidebar-overlay" onclick="toggleSidebar(false)" class="hidden fixed inset-0 bg-black/50 z-30 lg:hidden"></div>
+
+  <div class="flex-1 min-w-0">
+    <header class="sticky top-0 z-20 bg-white/90 dark:bg-black/90 backdrop-blur-lg border-b border-black/5 dark:border-white/5">
+      <div class="flex items-center justify-between h-16 sm:h-20 px-5 sm:px-8">
+        <div class="flex items-center gap-4">
+          <button onclick="toggleSidebar(true)" class="lg:hidden w-9 h-9 grid place-items-center rounded-lg border border-black/10 dark:border-white/10"><i class="fa-solid fa-bars"></i></button>
+          <h1 id="panel-title" class="font-display font-bold text-xl sm:text-2xl text-gray-900 dark:text-white">Dashboard</h1>
+        </div>
+        <div class="flex items-center gap-4 sm:gap-5">
+          <button onclick="showPanel('notifications')" class="relative w-9 h-9 grid place-items-center rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-gray-600 dark:text-gray-300">
+            <i class="fa-solid fa-bell"></i>
+            <span id="bell-badge" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-brand-600 text-white text-[9px] font-bold rounded-full grid place-items-center">0</span>
+          </button>
+          <div class="flex items-center gap-2.5">
+            <span class="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 grid place-items-center text-white font-bold text-sm">A</span>
+            <span class="hidden sm:block leading-tight"><span class="block text-sm font-semibold text-gray-900 dark:text-white">Admin</span></span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="p-5 sm:p-8">
+
+      <!-- ============ DASHBOARD ============ -->
+      <div id="panel-dashboard" class="panel active">
+        <div class="bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-400 text-xs rounded-xl px-4 py-3 mb-6 flex items-start gap-2.5">
+          <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+          <span>This panel shares live data with the main website — changes here sync automatically. It's still a prototype: a public production launch still needs a real server, database and authentication behind this UI.</span>
+        </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="stats-row"></div>
+
+        <div class="grid lg:grid-cols-3 gap-5 mb-6">
+          <div class="lg:col-span-2 bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6">
+            <h3 class="font-display font-bold text-gray-900 dark:text-white mb-5">Requests — Last 7 Days</h3>
+            <div id="chart-wrap"></div>
+            <div class="flex items-center gap-5 mt-4 text-xs text-gray-500">
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-brand-600"></span> All Requests</span>
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Confirmed</span>
+            </div>
+          </div>
+          <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-display font-bold text-gray-900 dark:text-white">Recent Requests</h3>
+              <button onclick="showPanel('bookings')" class="text-xs font-semibold text-brand-600 dark:text-brand-500">View All</button>
+            </div>
+            <div id="recent-bookings" class="flex flex-col gap-3.5"></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-6">
+          <button onclick="showPanel('vehicles')" class="bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 border border-black/5 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center gap-2"><i class="fa-solid fa-car text-brand-600 dark:text-brand-500"></i><span class="text-[11px] font-semibold">Add Vehicle</span></button>
+          <button onclick="showPanel('packages')" class="bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 border border-black/5 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center gap-2"><i class="fa-solid fa-box-open text-brand-600 dark:text-brand-500"></i><span class="text-[11px] font-semibold">Add Package</span></button>
+          <button onclick="showPanel('offers')" class="bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 border border-black/5 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center gap-2"><i class="fa-solid fa-tag text-brand-600 dark:text-brand-500"></i><span class="text-[11px] font-semibold">Add Offer</span></button>
+          <button onclick="showPanel('destinations')" class="bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 border border-black/5 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center gap-2"><i class="fa-solid fa-map-location-dot text-brand-600 dark:text-brand-500"></i><span class="text-[11px] font-semibold">Add Destination</span></button>
+          <button onclick="showPanel('gallery')" class="bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 border border-black/5 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center gap-2"><i class="fa-solid fa-images text-brand-600 dark:text-brand-500"></i><span class="text-[11px] font-semibold">Add Moment</span></button>
+          <button onclick="showPanel('bookings')" class="bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 border border-black/5 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center gap-2"><i class="fa-solid fa-calendar-check text-brand-600 dark:text-brand-500"></i><span class="text-[11px] font-semibold">View All</span></button>
+        </div>
+
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display font-bold text-gray-900 dark:text-white">Vehicle Management</h3>
+            <div class="flex items-center gap-3">
+              <button onclick="showPanel('vehicles')" class="text-xs font-semibold text-brand-600 dark:text-brand-500">View All</button>
+              <button onclick="openVehicleModal(null)" class="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-3.5 py-2 rounded-full"><i class="fa-solid fa-plus"></i> Add Vehicle</button>
+            </div>
+          </div>
+          <div id="vehicle-table-dashboard" class="overflow-x-auto"></div>
+        </div>
+      </div>
+
+      <!-- ============ BOOKINGS & ENQUIRIES ============ -->
+      <div id="panel-bookings" class="panel">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h3 class="font-display font-bold text-gray-900 dark:text-white">All Bookings &amp; Enquiries</h3>
+            <button onclick="exportBookingsToExcel()" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-full"><i class="fa-solid fa-file-excel"></i> Export as Excel</button>
+          </div>
+          <div class="flex flex-wrap gap-2.5 mb-5">
+            <div class="relative">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+              <input id="filter-search" oninput="renderBookings()" placeholder="Search name, phone, reference ID…" class="bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-lg text-xs pl-8 pr-3 py-2 outline-none w-56">
+            </div>
+            <select id="filter-type" onchange="renderBookings()" class="bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-lg text-xs px-3 py-2 outline-none">
+              <option value="">All Types</option>
+              <option>Vehicle Booking</option>
+              <option>Offer Enquiry</option>
+              <option>Instant Ride</option>
+            </select>
+            <select id="filter-status" onchange="renderBookings()" class="bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-lg text-xs px-3 py-2 outline-none">
+              <option value="">All Statuses</option>
+              <option>Pending</option><option>Office Calling</option><option>Confirmed</option><option>Trip Completed</option>
+            </select>
+            <input id="filter-from" type="date" onchange="renderBookings()" class="bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-lg text-xs px-3 py-2 outline-none" title="From date">
+            <input id="filter-to" type="date" onchange="renderBookings()" class="bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-lg text-xs px-3 py-2 outline-none" title="To date">
+            <button onclick="clearBookingFilters()" class="text-xs text-gray-500 hover:text-red-500 px-2">Clear filters</button>
+          </div>
+          <div id="bookings-table" class="overflow-x-auto"></div>
+        </div>
+      </div>
+
+      <!-- ============ VEHICLES ============ -->
+      <div id="panel-vehicles" class="panel">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6 mb-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display font-bold text-gray-900 dark:text-white">Vehicle Categories</h3>
+            <div class="flex gap-2">
+              <input id="vcat-input" placeholder="New category name" class="bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-lg text-sm px-3 py-2 outline-none focus:border-brand-600">
+              <button onclick="addVehicleCategory()" class="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-3.5 py-2 rounded-full"><i class="fa-solid fa-plus"></i> Add</button>
+            </div>
+          </div>
+          <div id="vehicle-categories-list" class="flex flex-wrap gap-2.5"></div>
+        </div>
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display font-bold text-gray-900 dark:text-white">Vehicle Management</h3>
+            <button onclick="openVehicleModal(null)" class="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-3.5 py-2 rounded-full"><i class="fa-solid fa-plus"></i> Add Vehicle</button>
+          </div>
+          <div id="vehicle-table-main" class="overflow-x-auto"></div>
+        </div>
+      </div>
+
+      <!-- ============ PACKAGES ============ -->
+      <div id="panel-packages" class="panel">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display font-bold text-gray-900 dark:text-white">Trip Packages</h3>
+            <div class="flex gap-2">
+              <input id="package-input" placeholder="New package name" class="bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-lg text-sm px-3 py-2 outline-none focus:border-brand-600">
+              <button onclick="addPackage()" class="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-3.5 py-2 rounded-full"><i class="fa-solid fa-plus"></i> Add</button>
+            </div>
+          </div>
+          <div id="packages-list" class="flex flex-wrap gap-2.5"></div>
+        </div>
+      </div>
+
+      <!-- ============ DESTINATIONS ============ -->
+      <div id="panel-destinations" class="panel">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display font-bold text-gray-900 dark:text-white">Destinations</h3>
+            <button onclick="openDestinationModal(null)" class="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-3.5 py-2 rounded-full"><i class="fa-solid fa-plus"></i> Add Destination</button>
+          </div>
+          <div id="destinations-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+      </div>
+
+      <!-- ============ OFFERS ============ -->
+      <div id="panel-offers" class="panel">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display font-bold text-gray-900 dark:text-white">Offers</h3>
+            <button onclick="openOfferModal(null)" class="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-3.5 py-2 rounded-full"><i class="fa-solid fa-plus"></i> Add Offer</button>
+          </div>
+          <div id="offers-grid" class="grid sm:grid-cols-2 gap-4"></div>
+        </div>
+      </div>
+
+      <!-- ============ PAGES ============ -->
+      <div id="panel-pages" class="panel">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6">
+          <h3 class="font-display font-bold text-gray-900 dark:text-white mb-4">Website Pages</h3>
+          <div id="pages-list" class="flex flex-col gap-3"></div>
+        </div>
+      </div>
+
+      <!-- ============ GALLERY / MOMENTS ============ -->
+      <div id="panel-gallery" class="panel">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display font-bold text-gray-900 dark:text-white">Gallery — Moments on the Road</h3>
+            <button onclick="openMomentModal(null)" class="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-3.5 py-2 rounded-full"><i class="fa-solid fa-plus"></i> Add Moment</button>
+          </div>
+          <div class="flex flex-wrap gap-2 mb-5" id="moments-section-tabs"></div>
+          <div id="gallery-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
+        </div>
+      </div>
+
+      <!-- ============ TESTIMONIALS ============ -->
+      <div id="panel-testimonials" class="panel">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display font-bold text-gray-900 dark:text-white">Testimonials</h3>
+            <button onclick="openTestimonialModal(null)" class="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-3.5 py-2 rounded-full"><i class="fa-solid fa-plus"></i> Add Testimonial</button>
+          </div>
+          <div id="testimonials-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+      </div>
+
+      <!-- ============ CONTACTS ============ -->
+      <div id="panel-contacts" class="panel">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6">
+          <h3 class="font-display font-bold text-gray-900 dark:text-white mb-4">Contact Messages</h3>
+          <div id="contacts-list" class="flex flex-col gap-3"></div>
+        </div>
+      </div>
+
+      <!-- ============ NOTIFICATIONS ============ -->
+      <div id="panel-notifications" class="panel">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display font-bold text-gray-900 dark:text-white">Notifications</h3>
+            <button onclick="clearNotifications()" class="text-xs font-semibold text-gray-500 hover:text-red-500">Clear All</button>
+          </div>
+          <div id="notifications-list" class="flex flex-col gap-3"></div>
+        </div>
+      </div>
+
+      <!-- ============ WEBSITE SETTINGS ============ -->
+      <div id="panel-website-settings" class="panel">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6 max-w-2xl mb-5">
+          <h3 class="font-display font-bold text-gray-900 dark:text-white mb-5">Logo Upload</h3>
+          <div class="grid sm:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-[11px] font-bold text-gray-500 uppercase mb-2">Main Website Logo</label>
+              <div class="flex items-center gap-3">
+                <span id="logo-main-preview" class="w-14 h-14 rounded-xl bg-white dark:bg-black border border-black/10 dark:border-white/10 grid place-items-center overflow-hidden shrink-0"><i class="fa-solid fa-cross text-brand-600 dark:text-brand-500"></i></span>
+                <label class="flex-1 flex items-center gap-2 bg-white dark:bg-black border border-dashed border-black/15 dark:border-white/15 hover:border-brand-600 rounded-xl px-3 py-2.5 cursor-pointer text-sm text-gray-500">
+                  <i class="fa-solid fa-cloud-arrow-up text-brand-600 dark:text-brand-500"></i> Upload
+                  <input type="file" accept="image/*" class="hidden" onchange="uploadLogo('main', this)">
+                </label>
+              </div>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-gray-500 uppercase mb-2">Travels / Company Logo</label>
+              <div class="flex items-center gap-3">
+                <span id="logo-travels-preview" class="w-14 h-14 rounded-xl bg-white dark:bg-black border border-black/10 dark:border-white/10 grid place-items-center overflow-hidden shrink-0"><i class="fa-solid fa-plane text-brand-600 dark:text-brand-500"></i></span>
+                <label class="flex-1 flex items-center gap-2 bg-white dark:bg-black border border-dashed border-black/15 dark:border-white/15 hover:border-brand-600 rounded-xl px-3 py-2.5 cursor-pointer text-sm text-gray-500">
+                  <i class="fa-solid fa-cloud-arrow-up text-brand-600 dark:text-brand-500"></i> Upload
+                  <input type="file" accept="image/*" class="hidden" onchange="uploadLogo('travels', this)">
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6 max-w-2xl">
+          <h3 class="font-display font-bold text-gray-900 dark:text-white mb-5">Company Details</h3>
+          <div class="grid sm:grid-cols-2 gap-4 mb-4">
+            <div><label class="block text-[11px] font-bold text-gray-500 uppercase mb-2">Company Name</label><input id="ws-name" class="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-brand-600"></div>
+            <div><label class="block text-[11px] font-bold text-gray-500 uppercase mb-2">Phone</label><input id="ws-phone" class="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-brand-600"></div>
+            <div class="sm:col-span-2"><label class="block text-[11px] font-bold text-gray-500 uppercase mb-2">Address</label><input id="ws-address" class="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-brand-600"></div>
+            <div class="sm:col-span-2"><label class="block text-[11px] font-bold text-gray-500 uppercase mb-2">Email</label><input id="ws-email" class="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-brand-600"></div>
+            <div class="sm:col-span-2"><label class="block text-[11px] font-bold text-gray-500 uppercase mb-2">Google Maps Embed URL</label><input id="ws-map" class="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-brand-600"></div>
+          </div>
+          <button id="ws-save" onclick="saveWebsiteSettings()" class="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white font-bold px-5 py-2.5 rounded-xl"><i class="fa-solid fa-check"></i> Save Settings</button>
+        </div>
+      </div>
+
+      <!-- ============ WHATSAPP & SOCIAL ============ -->
+      <div id="panel-social-links" class="panel">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6 max-w-2xl mb-5">
+          <h3 class="font-display font-bold text-gray-900 dark:text-white mb-2"><i class="fa-brands fa-whatsapp text-emerald-500 mr-1"></i> WhatsApp Chat Link</h3>
+          <p class="text-xs text-gray-500 mb-4">Enter your official WhatsApp number (e.g. +91 98424 87017) or a full chat link (e.g. https://wa.me/919842487017). Every WhatsApp button on the website — the floating button, Call/WhatsApp bar, and every booking/enquiry/instant-ride flow — uses this single value.</p>
+          <input id="sl-whatsapp" placeholder="+91 98424 87017 or https://wa.me/919842487017" class="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 mb-4">
+          <button id="sl-save" onclick="saveSocialLinks()" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl"><i class="fa-solid fa-check"></i> Save WhatsApp &amp; Social Links</button>
+        </div>
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6 max-w-2xl">
+          <h3 class="font-display font-bold text-gray-900 dark:text-white mb-5">Other Social Links</h3>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div><label class="block text-[11px] font-bold text-gray-500 uppercase mb-2"><i class="fa-brands fa-facebook mr-1"></i> Facebook</label><input id="sl-facebook" placeholder="https://facebook.com/..." class="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-brand-600"></div>
+            <div><label class="block text-[11px] font-bold text-gray-500 uppercase mb-2"><i class="fa-brands fa-instagram mr-1"></i> Instagram</label><input id="sl-instagram" placeholder="https://instagram.com/..." class="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-brand-600"></div>
+            <div><label class="block text-[11px] font-bold text-gray-500 uppercase mb-2"><i class="fa-brands fa-youtube mr-1"></i> YouTube</label><input id="sl-youtube" placeholder="https://youtube.com/..." class="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-brand-600"></div>
+            <div><label class="block text-[11px] font-bold text-gray-500 uppercase mb-2"><i class="fa-brands fa-linkedin mr-1"></i> LinkedIn</label><input id="sl-linkedin" placeholder="https://linkedin.com/..." class="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-brand-600"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SEO SETTINGS ============ -->
+      <div id="panel-seo-settings" class="panel">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6 max-w-2xl">
+          <h3 class="font-display font-bold text-gray-900 dark:text-white mb-5">SEO Settings</h3>
+          <div class="flex flex-col gap-4 mb-4">
+            <div><label class="block text-[11px] font-bold text-gray-500 uppercase mb-2">Meta Title</label><input id="seo-title" class="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-brand-600"></div>
+            <div><label class="block text-[11px] font-bold text-gray-500 uppercase mb-2">Meta Description</label><textarea id="seo-description" rows="3" class="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-brand-600"></textarea></div>
+            <div><label class="block text-[11px] font-bold text-gray-500 uppercase mb-2">Keywords</label><input id="seo-keywords" class="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-brand-600"></div>
+          </div>
+          <button id="seo-save" onclick="saveSeoSettings()" class="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white font-bold px-5 py-2.5 rounded-xl"><i class="fa-solid fa-check"></i> Save SEO Settings</button>
+        </div>
+      </div>
+
+      <!-- ============ THEME SETTINGS ============ -->
+      <div id="panel-theme-settings" class="panel">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6 max-w-2xl">
+          <h3 class="font-display font-bold text-gray-900 dark:text-white mb-5">Theme Settings</h3>
+          <p class="text-xs text-gray-500 mb-4">Sets the site-wide default theme. Visitors can still override it with the sun/moon toggle in the nav.</p>
+          <div class="flex gap-3 mb-6">
+            <button id="theme-opt-dark" onclick="setSiteDefaultTheme('dark')" class="flex-1 flex items-center justify-center gap-2 border rounded-xl py-3 text-sm font-semibold"><i class="fa-solid fa-moon"></i> Dark (Red/White/Black)</button>
+            <button id="theme-opt-light" onclick="setSiteDefaultTheme('light')" class="flex-1 flex items-center justify-center gap-2 border rounded-xl py-3 text-sm font-semibold"><i class="fa-solid fa-sun"></i> Light (Red/Black/White)</button>
+          </div>
+          <div id="theme-saved-note" class="text-xs text-emerald-500"></div>
+        </div>
+      </div>
+
+      <!-- ============ ADMINS ============ -->
+      <div id="panel-admins" class="panel">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-black/5 dark:border-white/5 rounded-2xl p-5 sm:p-6 max-w-lg">
+          <h3 class="font-display font-bold text-gray-900 dark:text-white mb-4">Admin Access</h3>
+          <p class="text-sm text-gray-500 mb-5">This demo uses a single shared passcode for the Admin Panel. A production deployment should replace this with real per-admin accounts, hashed passwords, and role-based access on a real backend.</p>
+          <label class="block text-[11px] font-bold text-gray-500 uppercase mb-2">New Passcode</label>
+          <input id="new-passcode" type="text" placeholder="Set a new admin passcode" class="w-full bg-white dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 mb-4">
+          <button onclick="changePasscode()" class="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white font-bold px-5 py-2.5 rounded-xl"><i class="fa-solid fa-key"></i> Update Passcode</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+<div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 hidden bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold px-5 py-3 rounded-xl shadow-2xl z-[200]"></div>
+
+<script src="admin.js"></script>
+</body>
+</html>
+
