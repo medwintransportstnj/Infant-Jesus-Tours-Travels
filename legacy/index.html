@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infant Jesus Tours & Travels — Your Journey Begins With Us</title>
+<meta name="description" content="Infant Jesus Tours & Travels — safe, comfortable, affordable vehicle rentals and tour packages across India. Based in Thanjavur, Tamil Nadu.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: { display: ['Sora','sans-serif'], body: ['Inter','sans-serif'] },
+        colors: { brand: { 400:'#F87171', 500:'#EF4444', 600:'#DC2626', 700:'#B91C1C' } },
+        boxShadow: { glow: '0 0 40px rgba(220,38,38,0.25)' },
+      }
+    }
+  }
+</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-white dark:bg-black text-gray-900 dark:text-gray-200 antialiased transition-colors">
+
+<!-- ============ HEADER ============ -->
+<header id="site-header" class="fixed top-0 inset-x-0 z-50 border-b border-black/5 dark:border-white/5 bg-white/85 dark:bg-black/85 backdrop-blur-lg">
+  <div class="max-w-7xl mx-auto px-5 sm:px-8">
+    <div class="flex items-center justify-between h-16 sm:h-20">
+      <a href="index.html" class="flex items-center gap-3 shrink-0">
+        <span id="logo-main-wrap" class="relative w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-glow overflow-hidden">
+          <i class="fa-solid fa-cross text-white text-lg"></i>
+        </span>
+        <span class="leading-tight">
+          <span class="block font-display font-bold text-gray-900 dark:text-white text-[13px] sm:text-[15px] tracking-wide">INFANT JESUS</span>
+          <span class="block font-display font-semibold text-brand-600 dark:text-brand-500 text-[9px] sm:text-[10px] tracking-[0.25em]">TOURS &amp; TRAVELS</span>
+        </span>
+      </a>
+
+      <nav class="hidden lg:flex items-center gap-7 text-sm font-medium text-gray-600 dark:text-gray-300">
+        <a href="#home" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Home</a>
+        <a href="#vehicles" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Vehicles</a>
+        <a href="#packages" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Packages</a>
+        <a href="#destinations" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Destinations</a>
+        <a href="#why-us" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Why Us</a>
+        <a href="#about" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">About</a>
+        <a href="#contact" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Contact</a>
+      </nav>
+
+      <div class="flex items-center gap-2.5">
+        <button id="theme-toggle" aria-label="Toggle theme" class="w-9 h-9 grid place-items-center rounded-full border border-black/10 dark:border-white/10 text-gray-600 dark:text-gray-300">
+          <i class="fa-solid fa-sun hidden dark:inline"></i><i class="fa-solid fa-moon dark:hidden"></i>
+        </button>
+        <button onclick="openInstantRide()" class="hidden sm:inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold px-4 py-2.5 rounded-full transition-colors">
+          <i class="fa-solid fa-bolt"></i> Instant Ride
+        </button>
+        <button id="menu-btn" aria-label="Open menu" class="lg:hidden w-9 h-9 grid place-items-center rounded-lg border border-black/10 dark:border-white/10">
+          <i class="fa-solid fa-bars" id="menu-icon"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="mobile-menu" class="hidden lg:hidden border-t border-black/5 dark:border-white/5 bg-white/95 dark:bg-black/95 backdrop-blur-lg">
+    <div class="px-5 py-4 flex flex-col gap-1 text-sm font-medium">
+      <a href="#home" class="mobile-link px-3 py-2.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">Home</a>
+      <a href="#vehicles" class="mobile-link px-3 py-2.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">Vehicles</a>
+      <a href="#packages" class="mobile-link px-3 py-2.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">Packages</a>
+      <a href="#destinations" class="mobile-link px-3 py-2.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">Destinations</a>
+      <a href="#why-us" class="mobile-link px-3 py-2.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">Why Us</a>
+      <a href="#about" class="mobile-link px-3 py-2.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">About</a>
+      <a href="#contact" class="mobile-link px-3 py-2.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">Contact</a>
+      <button onclick="openInstantRide()" class="mt-2 inline-flex items-center justify-center gap-2 bg-emerald-600 text-white text-sm font-bold px-4 py-3 rounded-full"><i class="fa-solid fa-bolt"></i> Instant Ride</button>
+    </div>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section id="home" class="relative pt-28 pb-40 sm:pt-36 sm:pb-48 overflow-visible bg-gradient-to-br from-gray-50 to-white dark:from-gray-950 dark:to-black">
+  <div id="hero-slideshow" class="absolute inset-0 -bottom-24 sm:-bottom-32 overflow-hidden pointer-events-none z-0"></div>
+  <div class="absolute inset-0 -bottom-24 sm:-bottom-32 bg-gradient-to-b from-white/70 via-white/40 to-white dark:from-black/60 dark:via-black/50 dark:to-black pointer-events-none z-0"></div>
+  <div class="absolute inset-0 opacity-[0.05] dark:opacity-[0.07] pointer-events-none z-0" style="background-image: radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0); background-size:22px 22px;"></div>
+  <div class="relative max-w-7xl mx-auto px-5 sm:px-8 z-10">
+    <div class="max-w-xl reveal in">
+      <div class="inline-flex items-center gap-2 text-brand-600 dark:text-brand-500 text-xs font-bold tracking-[0.25em] uppercase mb-5">
+        <span class="w-6 h-px bg-brand-600 dark:bg-brand-500"></span> Safe · Comfortable · Affordable
+      </div>
+      <h1 class="hero-text font-display font-extrabold text-4xl sm:text-5xl md:text-6xl text-gray-900 dark:text-white leading-[1.05] mb-5">
+        Your Journey<br/>Begins With <span class="text-brand-600 dark:text-brand-500">Us</span>
+      </h1>
+      <p class="hero-text text-gray-600 dark:text-gray-400 text-base sm:text-lg leading-relaxed mb-8 max-w-md">
+        Experience the best travel service across India with comfort and safety — cars, SUVs, tempo travellers and buses for every trip. No account needed — just tell us your trip and we'll confirm it on WhatsApp.
+      </p>
+      <div class="flex flex-wrap gap-3 mb-8">
+        <button onclick="openBooking()" class="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white font-bold px-6 py-3.5 rounded-full transition-colors shadow-glow">
+          <i class="fa-solid fa-car"></i> Book Vehicle
+        </button>
+        <button onclick="openInstantRide()" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-3.5 rounded-full transition-colors">
+          <i class="fa-solid fa-bolt"></i> Instant Ride
+        </button>
+        <a href="#packages" class="inline-flex items-center gap-2 border border-black/15 dark:border-white/20 hover:border-brand-600 dark:hover:border-brand-500 hover:text-brand-600 dark:hover:text-brand-400 text-gray-700 dark:text-gray-200 font-semibold px-6 py-3.5 rounded-full transition-colors">
+          <i class="fa-solid fa-route"></i> Explore Packages
+        </a>
+      </div>
+      <div class="flex flex-wrap items-center gap-6 text-sm">
+        <a id="hero-call" href="tel:" class="flex items-center gap-2.5 text-gray-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+          <span class="w-9 h-9 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 grid place-items-center"><i class="fa-solid fa-phone text-brand-600 dark:text-brand-500"></i></span>
+          <span><span class="block text-[11px] text-gray-500">Call Now</span><span id="hero-phone">—</span></span>
+        </a>
+        <a id="hero-whatsapp" href="#" target="_blank" rel="noopener" class="flex items-center gap-2.5 text-gray-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+          <span class="w-9 h-9 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 grid place-items-center"><i class="fa-brands fa-whatsapp text-brand-600 dark:text-brand-500"></i></span>
+          <span><span class="block text-[11px] text-gray-500">WhatsApp</span>Chat with us</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BOOKING SEARCH WIDGET ============ -->
+<section class="relative px-5 sm:px-8 -mt-24 sm:-mt-16 z-20">
+  <div class="max-w-5xl mx-auto bg-white dark:bg-gray-900 border border-black/10 dark:border-white/10 rounded-3xl shadow-2xl p-5 sm:p-7 reveal">
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+      <div class="sm:col-span-1 relative">
+        <label class="block text-[11px] font-bold tracking-wide text-gray-500 uppercase mb-2">From</label>
+        <div class="flex items-center gap-2 bg-gray-50 dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3 py-3 focus-within:border-brand-600 dark:focus-within:border-brand-500 transition-colors">
+          <i class="fa-solid fa-location-dot text-brand-600 dark:text-brand-500"></i>
+          <input id="widget-from" type="text" placeholder="Pickup Location" autocomplete="off" class="bg-transparent w-full text-sm text-gray-900 dark:text-white placeholder:text-gray-500 outline-none">
+        </div>
+        <div id="widget-from-list" class="hidden absolute left-0 right-0 top-full mt-1 bg-white dark:bg-gray-900 border border-black/10 dark:border-white/10 rounded-xl shadow-2xl z-30 max-h-56 overflow-y-auto"></div>
+      </div>
+      <div class="sm:col-span-1 relative">
+        <label class="block text-[11px] font-bold tracking-wide text-gray-500 uppercase mb-2">To</label>
+        <div class="flex items-center gap-2 bg-gray-50 dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3 py-3 focus-within:border-brand-600 dark:focus-within:border-brand-500 transition-colors">
+          <i class="fa-solid fa-flag-checkered text-brand-600 dark:text-brand-500"></i>
+          <input id="widget-to" type="text" placeholder="Destination" autocomplete="off" class="bg-transparent w-full text-sm text-gray-900 dark:text-white placeholder:text-gray-500 outline-none">
+        </div>
+        <div id="widget-to-list" class="hidden absolute left-0 right-0 top-full mt-1 bg-white dark:bg-gray-900 border border-black/10 dark:border-white/10 rounded-xl shadow-2xl z-30 max-h-56 overflow-y-auto"></div>
+      </div>
+      <div class="sm:col-span-1">
+        <label class="block text-[11px] font-bold tracking-wide text-gray-500 uppercase mb-2">Members</label>
+        <div class="flex items-center gap-2 bg-gray-50 dark:bg-black border border-black/10 dark:border-white/10 rounded-xl px-3 py-3 focus-within:border-brand-600 dark:focus-within:border-brand-500 transition-colors">
+          <i class="fa-solid fa-users text-brand-600 dark:text-brand-500"></i>
+          <input id="widget-members" type="number" min="1" placeholder="No. of Members" class="bg-transparent w-full text-sm text-gray-900 dark:text-white placeholder:text-gray-500 outline-none">
+        </div>
+      </div>
+      <button onclick="openBooking()" class="sm:col-span-1 inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-500 text-white font-bold px-5 py-3.5 rounded-xl transition-colors shadow-glow">
+        <i class="fa-solid fa-magnifying-glass"></i> Search Vehicles
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ KEY FEATURES ============ -->
+<section class="pt-24 sm:pt-28 pb-20">
+  <div class="max-w-7xl mx-auto px-5 sm:px-8">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div class="reveal card-hover bg-gray-50 dark:bg-gray-900/60 border border-black/5 dark:border-white/5 rounded-2xl p-5 text-center">
+        <i class="fa-solid fa-id-card text-2xl text-brand-600 dark:text-brand-500 mb-3"></i>
+        <div class="font-display font-bold text-sm text-gray-900 dark:text-white mb-1">Professional Drivers</div>
+        <div class="text-[11px] text-gray-500">Experienced &amp; Verified</div>
+      </div>
+      <div class="reveal card-hover bg-gray-50 dark:bg-gray-900/60 border border-black/5 dark:border-white/5 rounded-2xl p-5 text-center">
+        <i class="fa-solid fa-car text-2xl text-brand-600 dark:text-brand-500 mb-3"></i>
+        <div class="font-display font-bold text-sm text-gray-900 dark:text-white mb-1">Clean &amp; Safe Vehicles</div>
+        <div class="text-[11px] text-gray-500">Well Maintained</div>
+      </div>
+      <div class="reveal card-hover bg-gray-50 dark:bg-gray-900/60 border border-black/5 dark:border-white/5 rounded-2xl p-5 text-center">
+        <i class="fa-solid fa-tag text-2xl text-brand-600 dark:text-brand-500 mb-3"></i>
+        <div class="font-display font-bold text-sm text-gray-900 dark:text-white mb-1">Affordable Pricing</div>
+        <div class="text-[11px] text-gray-500">Best Price Guarantee</div>
+      </div>
+      <div class="reveal card-hover bg-gray-50 dark:bg-gray-900/60 border border-black/5 dark:border-white/5 rounded-2xl p-5 text-center">
+        <i class="fa-solid fa-headset text-2xl text-brand-600 dark:text-brand-500 mb-3"></i>
+        <div class="font-display font-bold text-sm text-gray-900 dark:text-white mb-1">24x7 Support</div>
+        <div class="text-[11px] text-gray-500">Always Here to Help</div>
+      </div>
+      <div class="reveal card-hover bg-gray-50 dark:bg-gray-900/60 border border-black/5 dark:border-white/5 rounded-2xl p-5 text-center">
+        <i class="fa-solid fa-clock text-2xl text-brand-600 dark:text-brand-500 mb-3"></i>
+        <div class="font-display font-bold text-sm text-gray-900 dark:text-white mb-1">On Time Service</div>
+        <div class="text-[11px] text-gray-500">Punctual &amp; Reliable</div>
+      </div>
+      <div class="reveal card-hover bg-gray-50 dark:bg-gray-900/60 border border-black/5 dark:border-white/5 rounded-2xl p-5 text-center">
+        <i class="fa-solid fa-people-roof text-2xl text-brand-600 dark:text-brand-500 mb-3"></i>
+        <div class="font-display font-bold text-sm text-gray-900 dark:text-white mb-1">Family Friendly</div>
+        <div class="text-[11px] text-gray-500">Safe for Families</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VEHICLES ============ -->
+<section id="vehicles" class="py-20 sm:py-24 border-t border-black/5 dark:border-white/5">
+  <div class="max-w-6xl mx-auto px-5 sm:px-8">
+    <div id="fleet-banner"></div>
+    <div class="mb-10 reveal">
+      <div class="text-brand-600 dark:text-brand-500 text-xs font-bold tracking-[0.25em] uppercase mb-2">Our Fleet</div>
+      <h2 class="font-display font-extrabold text-3xl sm:text-4xl text-gray-900 dark:text-white">Vehicles We Have</h2>
+    </div>
+    <div id="vehicles-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </div>
+</section>
+
+<!-- ============ PACKAGES / OFFERS ============ -->
+<section id="packages" class="py-20 sm:py-24 border-t border-black/5 dark:border-white/5 bg-gray-50 dark:bg-gray-950/40">
+  <div class="max-w-5xl mx-auto px-5 sm:px-8">
+    <div id="packages-banner"></div>
+    <div class="mb-10 reveal">
+      <div class="text-brand-600 dark:text-brand-500 text-xs font-bold tracking-[0.25em] uppercase mb-2">Limited Time</div>
+      <h2 class="font-display font-extrabold text-3xl sm:text-4xl text-gray-900 dark:text-white">Special Offers</h2>
+    </div>
+    <div id="offers-list" class="flex flex-col gap-5"></div>
+
+    <div class="mt-14 reveal">
+      <div class="text-brand-600 dark:text-brand-500 text-xs font-bold tracking-[0.25em] uppercase mb-2">Trip Types</div>
+      <h2 class="font-display font-extrabold text-2xl sm:text-3xl text-gray-900 dark:text-white mb-6">Popular Trip Categories</h2>
+      <div id="categories-list" class="flex gap-3 overflow-x-auto pb-2"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DESTINATIONS ============ -->
+<section id="destinations" class="py-20 sm:py-24 border-t border-black/5 dark:border-white/5">
+  <div class="max-w-6xl mx-auto px-5 sm:px-8">
+    <div id="destinations-banner"></div>
+    <div class="mb-10 reveal">
+      <div class="text-brand-600 dark:text-brand-500 text-xs font-bold tracking-[0.25em] uppercase mb-2">Where To Next</div>
+      <h2 class="font-display font-extrabold text-3xl sm:text-4xl text-gray-900 dark:text-white">Popular Destinations</h2>
+    </div>
+    <div id="destinations-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+  </div>
+</section>
+
+<!-- ============ WHY US ============ -->
+<section id="why-us" class="py-20 sm:py-24 border-t border-black/5 dark:border-white/5 bg-gray-50 dark:bg-gray-950/40">
+  <div class="max-w-6xl mx-auto px-5 sm:px-8 grid lg:grid-cols-2 gap-14 items-center">
+    <div class="reveal">
+      <div class="text-brand-600 dark:text-brand-500 text-xs font-bold tracking-[0.25em] uppercase mb-2">Why Us</div>
+      <h2 class="font-display font-extrabold text-3xl sm:text-4xl text-gray-900 dark:text-white mb-6">Why Choose Infant Jesus Tours &amp; Travels</h2>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="flex items-start gap-3"><span class="w-8 h-8 rounded-full bg-brand-600/10 text-brand-600 dark:text-brand-500 grid place-items-center shrink-0 mt-0.5"><i class="fa-solid fa-check text-xs"></i></span><span class="text-sm text-gray-700 dark:text-gray-300">Licensed &amp; insured fleet</span></div>
+        <div class="flex items-start gap-3"><span class="w-8 h-8 rounded-full bg-brand-600/10 text-brand-600 dark:text-brand-500 grid place-items-center shrink-0 mt-0.5"><i class="fa-solid fa-check text-xs"></i></span><span class="text-sm text-gray-700 dark:text-gray-300">Verified, background-checked drivers</span></div>
+        <div class="flex items-start gap-3"><span class="w-8 h-8 rounded-full bg-brand-600/10 text-brand-600 dark:text-brand-500 grid place-items-center shrink-0 mt-0.5"><i class="fa-solid fa-check text-xs"></i></span><span class="text-sm text-gray-700 dark:text-gray-300">No hidden charges, transparent billing</span></div>
+        <div class="flex items-start gap-3"><span class="w-8 h-8 rounded-full bg-brand-600/10 text-brand-600 dark:text-brand-500 grid place-items-center shrink-0 mt-0.5"><i class="fa-solid fa-check text-xs"></i></span><span class="text-sm text-gray-700 dark:text-gray-300">Round-trip &amp; one-way options</span></div>
+        <div class="flex items-start gap-3"><span class="w-8 h-8 rounded-full bg-brand-600/10 text-brand-600 dark:text-brand-500 grid place-items-center shrink-0 mt-0.5"><i class="fa-solid fa-check text-xs"></i></span><span class="text-sm text-gray-700 dark:text-gray-300">Book instantly over WhatsApp — no account needed</span></div>
+        <div class="flex items-start gap-3"><span class="w-8 h-8 rounded-full bg-brand-600/10 text-brand-600 dark:text-brand-500 grid place-items-center shrink-0 mt-0.5"><i class="fa-solid fa-check text-xs"></i></span><span class="text-sm text-gray-700 dark:text-gray-300">Custom packages for any group size</span></div>
+      </div>
+    </div>
+    <div class="reveal grid grid-cols-2 gap-4">
+      <div class="card-hover bg-white dark:bg-gray-900/60 border border-black/5 dark:border-white/5 rounded-2xl p-6 text-center"><div class="font-display font-extrabold text-3xl text-brand-600 dark:text-brand-500 mb-1">12+</div><div class="text-xs text-gray-500">Years of Service</div></div>
+      <div class="card-hover bg-white dark:bg-gray-900/60 border border-black/5 dark:border-white/5 rounded-2xl p-6 text-center"><div class="font-display font-extrabold text-3xl text-brand-600 dark:text-brand-500 mb-1">10K+</div><div class="text-xs text-gray-500">Happy Customers</div></div>
+      <div class="card-hover bg-white dark:bg-gray-900/60 border border-black/5 dark:border-white/5 rounded-2xl p-6 text-center"><div class="font-display font-extrabold text-3xl text-brand-600 dark:text-brand-500 mb-1">28</div><div class="text-xs text-gray-500">Destinations Covered</div></div>
+      <div class="card-hover bg-white dark:bg-gray-900/60 border border-black/5 dark:border-white/5 rounded-2xl p-6 text-center"><div class="font-display font-extrabold text-3xl text-brand-600 dark:text-brand-500 mb-1">24×7</div><div class="text-xs text-gray-500">Support</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ABOUT ============ -->
+<section id="about" class="py-20 sm:py-24 border-t border-black/5 dark:border-white/5">
+  <div class="max-w-6xl mx-auto px-5 sm:px-8 grid lg:grid-cols-2 gap-14 items-center">
+    <div class="reveal order-2 lg:order-1 bg-gray-50 dark:bg-gray-900/60 border border-black/5 dark:border-white/10 rounded-3xl p-8 font-mono text-xs text-brand-600 dark:text-brand-400 leading-loose">
+      <div class="flex justify-between border-b border-dashed border-brand-600/20 py-1.5"><span>fleet.status</span><span>ACTIVE</span></div>
+      <div class="flex justify-between border-b border-dashed border-brand-600/20 py-1.5"><span>vehicles.count</span><span id="mono-vehicle-count">0</span></div>
+      <div class="flex justify-between border-b border-dashed border-brand-600/20 py-1.5"><span>region.base</span><span>THANJAVUR, TN</span></div>
+      <div class="flex justify-between border-b border-dashed border-brand-600/20 py-1.5"><span>support</span><span>24×7</span></div>
+      <div class="flex justify-between py-1.5"><span>contact</span><span id="mono-phone">—</span></div>
+    </div>
+    <div class="reveal order-1 lg:order-2">
+      <div class="text-brand-600 dark:text-brand-500 text-xs font-bold tracking-[0.25em] uppercase mb-2">About Us</div>
+      <h2 class="font-display font-extrabold text-3xl sm:text-4xl text-gray-900 dark:text-white mb-5">Trusted Travel Partner in Thanjavur</h2>
+      <p class="text-gray-600 dark:text-gray-400 text-sm sm:text-base leading-relaxed mb-4">Infant Jesus Tours &amp; Travels arranges safe, comfortable and affordable vehicle rentals and tour packages across Tamil Nadu and beyond. From devotional tours to family holidays, corporate trips and airport transfers, our fleet and drivers are ready around the clock.</p>
+      <p class="text-gray-600 dark:text-gray-400 text-sm sm:text-base leading-relaxed">Every booking is backed by verified drivers, well-maintained vehicles, and a support team that answers — day or night.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TESTIMONIALS ============ -->
+<section id="testimonials" class="py-20 sm:py-24 border-t border-black/5 dark:border-white/5 bg-gray-50 dark:bg-gray-950/40">
+  <div class="max-w-6xl mx-auto px-5 sm:px-8">
+    <div class="mb-10 reveal">
+      <div class="text-brand-600 dark:text-brand-500 text-xs font-bold tracking-[0.25em] uppercase mb-2">Testimonials</div>
+      <h2 class="font-display font-extrabold text-3xl sm:text-4xl text-gray-900 dark:text-white">What Our Customers Say</h2>
+    </div>
+    <div id="testimonials-grid" class="grid md:grid-cols-3 gap-5"></div>
+  </div>
+</section>
+
+<!-- ============ GALLERY ============ -->
+<section id="gallery" class="py-20 sm:py-24 border-t border-black/5 dark:border-white/5">
+  <div class="max-w-6xl mx-auto px-5 sm:px-8">
+    <div class="mb-10 reveal">
+      <div class="text-brand-600 dark:text-brand-500 text-xs font-bold tracking-[0.25em] uppercase mb-2">Gallery</div>
+      <h2 class="font-display font-extrabold text-3xl sm:text-4xl text-gray-900 dark:text-white">Moments on the Road</h2>
+    </div>
+    <div id="gallery-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+  </div>
+</section>
+
+<!-- ============ CONTACT + OFFICE ADDRESS + MAP ============ -->
+<section id="contact" class="py-20 sm:py-24 border-t border-black/5 dark:border-white/5 bg-gray-50 dark:bg-gray-950/40">
+  <div class="max-w-5xl mx-auto px-5 sm:px-8">
+    <div class="mb-10 reveal">
+      <div class="text-brand-600 dark:text-brand-500 text-xs font-bold tracking-[0.25em] uppercase mb-2">Reach Us</div>
+      <h2 class="font-display font-extrabold text-3xl sm:text-4xl text-gray-900 dark:text-white">Office Address &amp; Contact</h2>
+    </div>
+    <div class="grid lg:grid-cols-2 gap-8">
+      <div class="reveal flex flex-col gap-5">
+        <div class="flex gap-3"><i class="fa-solid fa-location-dot text-brand-600 dark:text-brand-500 mt-1"></i><span id="contact-address" class="text-sm text-gray-700 dark:text-gray-300">—</span></div>
+        <div class="flex gap-3"><i class="fa-solid fa-phone text-brand-600 dark:text-brand-500 mt-1"></i><span id="contact-phone" class="text-sm text-gray-700 dark:text-gray-300">—</span></div>
+        <div class="flex gap-3"><i class="fa-solid fa-envelope text-brand-600 dark:text-brand-500 mt-1"></i><span id="contact-email" class="text-sm text-gray-700 dark:text-gray-300">—</span></div>
+
+        <div class="bg-white dark:bg-gray-900 border border-black/10 dark:border-white/10 rounded-2xl p-5 mt-2">
+          <div class="font-semibold text-sm text-gray-900 dark:text-white mb-3">Send us a message</div>
+          <div class="flex flex-col gap-3">
+            <input id="ct-name" placeholder="Name" class="bg-gray-50 dark:bg-black border border-black/10 dark:border-white/10 rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 dark:focus:border-brand-500">
+            <input id="ct-email" placeholder="Email" class="bg-gray-50 dark:bg-black border border-black/10 dark:border-white/10 rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 dark:focus:border-brand-500">
+            <textarea id="ct-message" rows="3" placeholder="Message" class="bg-gray-50 dark:bg-black border border-black/10 dark:border-white/10 rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 dark:focus:border-brand-500"></textarea>
+            <div id="ct-error" class="text-xs text-red-500"></div>
+            <button id="ct-submit" onclick="submitContact()" class="inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-500 text-white font-bold px-5 py-2.5 rounded-lg transition-colors"><i class="fa-solid fa-paper-plane"></i> Send Message</button>
+          </div>
+        </div>
+      </div>
+      <div class="reveal">
+        <div class="rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 aspect-[4/3] lg:aspect-auto lg:h-full min-h-[320px]">
+          <iframe id="office-map" title="Office location map" src="" width="100%" height="100%" style="border:0; min-height:320px;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" class="w-full h-full"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="border-t border-black/5 dark:border-white/5 bg-white dark:bg-gray-950/60 pt-16 pb-8">
+  <div class="max-w-7xl mx-auto px-5 sm:px-8">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+      <div>
+        <div class="flex items-center gap-3 mb-4">
+          <span class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 grid place-items-center"><i class="fa-solid fa-cross text-white text-sm"></i></span>
+          <span class="font-display font-bold text-gray-900 dark:text-white text-sm">INFANT JESUS TOURS &amp; TRAVELS</span>
+        </div>
+        <p class="text-sm text-gray-500 leading-relaxed mb-4">Safe, comfortable and affordable travel across India — based in Thanjavur, Tamil Nadu.</p>
+        <div id="footer-social" class="flex gap-2.5"></div>
+      </div>
+      <div>
+        <div class="font-display font-bold text-gray-900 dark:text-white text-xs uppercase tracking-wide mb-4">Quick Links</div>
+        <div class="flex flex-col gap-2.5 text-sm text-gray-500">
+          <a href="#home" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Home</a>
+          <a href="#vehicles" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Vehicles</a>
+          <a href="#packages" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Packages</a>
+          <a href="#destinations" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Destinations</a>
+        </div>
+      </div>
+      <div>
+        <div class="font-display font-bold text-gray-900 dark:text-white text-xs uppercase tracking-wide mb-4">Company</div>
+        <div class="flex flex-col gap-2.5 text-sm text-gray-500">
+          <a href="#about" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">About Us</a>
+          <a href="#testimonials" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Testimonials</a>
+          <a href="#gallery" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Gallery</a>
+        </div>
+      </div>
+      <div>
+        <div class="font-display font-bold text-gray-900 dark:text-white text-xs uppercase tracking-wide mb-4">Contact</div>
+        <div class="flex flex-col gap-2.5 text-sm text-gray-500">
+          <span id="footer-address" class="flex items-start gap-2"><i class="fa-solid fa-location-dot text-brand-600 dark:text-brand-500 mt-1"></i> —</span>
+          <span id="footer-phone" class="flex items-center gap-2"><i class="fa-solid fa-phone text-brand-600 dark:text-brand-500"></i> —</span>
+          <span id="footer-email" class="flex items-center gap-2"><i class="fa-solid fa-envelope text-brand-600 dark:text-brand-500"></i> —</span>
+        </div>
+      </div>
+    </div>
+    <div class="border-t border-black/5 dark:border-white/5 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
+      <span>© <span id="year"></span> Infant Jesus Tours &amp; Travels. All rights reserved.</span>
+      <a href="admin.html" title="Admin" aria-label="Admin login" class="w-7 h-7 rounded-full grid place-items-center border border-black/10 dark:border-white/10 text-gray-400 hover:text-brand-600 dark:hover:text-brand-500 hover:border-brand-600 dark:hover:border-brand-500 transition-colors">
+        <i class="fa-solid fa-lock text-[11px]"></i>
+      </a>
+    </div>
+  </div>
+</footer>
+
+<!-- Floating WhatsApp button -->
+<a id="wa-fab" href="#" target="_blank" rel="noopener" class="wa-fab wa-pulse w-14 h-14 rounded-full bg-[#25D366] hover:bg-[#1fbd5a] text-white grid place-items-center shadow-2xl text-2xl">
+  <i class="fa-brands fa-whatsapp"></i>
+</a>
+
+<!-- Modal + toast roots -->
+<div id="modal-root"></div>
+<div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 hidden bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold px-5 py-3 rounded-xl shadow-2xl z-[200]"></div>
+
+<script src="script.js"></script>
+</body>
+</html>

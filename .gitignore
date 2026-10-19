@@ -1,0 +1,21 @@
+node_modules
+dist
+.vercel
+.DS_Store
+*.log
+
+# secrets — never commit
+.env
+.env.*
+!.env.example
+
+# generated at build time from VITE_SITE_URL
+public/robots.txt
+public/sitemap.xml
+
+# supabase CLI local state
+supabase/.temp
+supabase/.branches
+
+# local e2e artefacts
+__pycache__
