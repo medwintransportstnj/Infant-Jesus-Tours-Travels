@@ -1,28 +1,38 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { AlertCircle, Bell, CheckCircle2, Info, X } from 'lucide-react';
 
-type Tone = 'success' | 'error' | 'info';
-interface ToastItem { id: number; tone: Tone; title: string; body?: string }
-interface ToastCtx { success: (title: string, body?: string) => void; error: (title: string, body?: string) => void; info: (title: string, body?: string) => void }
+type Tone = 'success' | 'error' | 'info' | 'notice';
+export interface ToastOptions { href?: string; linkLabel?: string }
+interface ToastItem { id: number; tone: Tone; title: string; body?: string; opts?: ToastOptions }
+interface ToastCtx {
+  success: (title: string, body?: string) => void;
+  error: (title: string, body?: string) => void;
+  info: (title: string, body?: string) => void;
+  /** A live notification (new booking, status change…). Stays longer and can link to the item. */
+  notify: (title: string, body?: string, opts?: ToastOptions) => void;
+}
 
 const ToastContext = createContext<ToastCtx | null>(null);
 const TONE = {
   success: { Icon: CheckCircle2, cls: 'border-success/40 bg-success-soft text-success' },
   error: { Icon: AlertCircle, cls: 'border-danger/40 bg-danger-soft text-danger' },
   info: { Icon: Info, cls: 'border-info/30 bg-info-soft text-info' },
+  notice: { Icon: Bell, cls: 'border-line bg-card text-accent-text' },
 } as const;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const nextId = useRef(1);
   const dismiss = useCallback((id: number) => setItems((list) => list.filter((t) => t.id !== id)), []);
-  const push = useCallback((tone: Tone, title: string, body?: string) => {
+  const push = useCallback((tone: Tone, title: string, body?: string, opts?: ToastOptions) => {
     const id = nextId.current++;
-    setItems((list) => [...list.slice(-2), { id, tone, title, body }]);
-    window.setTimeout(() => dismiss(id), tone === 'error' ? 7000 : 4200);
+    setItems((list) => [...list.slice(-2), { id, tone, title, body, opts }]);
+    window.setTimeout(() => dismiss(id), tone === 'error' ? 7000 : tone === 'notice' ? 8000 : 4200);
   }, [dismiss]);
   const api = useMemo<ToastCtx>(() => ({
     success: (t, b) => push('success', t, b), error: (t, b) => push('error', t, b), info: (t, b) => push('info', t, b),
+    notify: (t, b, o) => push('notice', t, b, o),
   }), [push]);
 
   return (
@@ -33,11 +43,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           const { Icon, cls } = TONE[t.tone];
           return (
             <div key={t.id} role={t.tone === 'error' ? 'alert' : 'status'}
-              className={`pointer-events-auto flex w-full max-w-md animate-rise-in items-start gap-3 rounded-lg border p-3.5 shadow-lift ${cls}`}>
+              className={`pointer-events-auto flex w-full max-w-md animate-rise-in items-start gap-3 rounded-xl border p-3.5 shadow-lift ${cls}`}>
               <Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">{t.title}</p>
                 {t.body && <p className="mt-0.5 text-[13px] text-ink/80">{t.body}</p>}
+                {t.opts?.href && <Link to={t.opts.href} onClick={() => dismiss(t.id)} className="link mt-1 inline-flex min-h-8 items-center text-[13px]">{t.opts.linkLabel ?? 'Open'}</Link>}
               </div>
               <button type="button" onClick={() => dismiss(t.id)} aria-label="Dismiss notification"
                 className="-m-1.5 grid h-8 w-8 shrink-0 place-items-center rounded-md text-ink/60 hover:bg-ink/5 hover:text-ink">

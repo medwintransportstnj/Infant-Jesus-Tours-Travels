@@ -1,28 +1,30 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { subscribeLive } from '@/lib/live';
 import { supabase, timeoutSignal, type Bucket } from '@/lib/supabase';
 import { friendlyError, isSessionError } from '@/lib/errors';
 import { storageObjectName, type PreparedImage } from '@/utils/image';
 import { useAuth } from './auth';
 
-/** Subscribes to row changes on the given tables and calls `onChange` (debounced). No polling. */
+/**
+ * Subscribes to row changes on the given tables and calls `onChange` (debounced). Also calls it when the
+ * live connection (re)connects or the tab returns, so the page catches up after any gap. No polling.
+ */
 export function useRealtime(tables: string[], onChange: (table: string, payload: { eventType: string; new: Record<string, unknown> }) => void, debounceMs = 300) {
-  const id = useId();
   const cb = useRef(onChange); cb.current = onChange;
   const key = tables.join(',');
   useEffect(() => {
     const timers = new Map<string, number>();
-    let channel = supabase.channel(`admin-${key}-${id}`);
-    key.split(',').forEach((table) => {
-      channel = channel.on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
-        window.clearTimeout(timers.get(table));
-        const p = { eventType: payload.eventType, new: (payload.new ?? {}) as Record<string, unknown> };
-        if (debounceMs === 0) { cb.current(table, p); return; }
-        timers.set(table, window.setTimeout(() => cb.current(table, p), debounceMs));
-      });
-    });
-    channel.subscribe();
-    return () => { timers.forEach((t) => window.clearTimeout(t)); void supabase.removeChannel(channel); };
-  }, [key, id, debounceMs]);
+    const fire = (table: string, p: { eventType: string; new: Record<string, unknown> }) => {
+      window.clearTimeout(timers.get(table));
+      if (debounceMs === 0) { cb.current(table, p); return; }
+      timers.set(table, window.setTimeout(() => cb.current(table, p), debounceMs));
+    };
+    const names = key.split(',');
+    const close = subscribeLive(supabase, 'admin', names.map((table) => ({ table })),
+      (e) => fire(e.table, { eventType: e.eventType, new: e.new }),
+      () => fire(names[0], { eventType: 'RESYNC', new: {} }));
+    return () => { timers.forEach((t) => window.clearTimeout(t)); close(); };
+  }, [key, debounceMs]);
 }
 
 /** Maps an API error to a message and, if the session is gone, sends the admin back to sign-in. */

@@ -5,6 +5,7 @@ import { SiteDataProvider } from '@/hooks/useSiteData';
 import { ThemeProvider } from '@/hooks/useTheme';
 import { ToastProvider } from '@/components/ui/Toast';
 import { CustomerProvider } from '@/customer/auth';
+import { primeAudio } from '@/lib/chime';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SiteLayout } from '@/components/site/Layout';
 import Home from '@/pages/Home';
@@ -29,14 +30,16 @@ const Fallback = () => (
   <div className="grid min-h-[50dvh] place-items-center" role="status"><Loader2 className="h-6 w-6 animate-spin text-muted" aria-hidden /><span className="sr-only">Loading…</span></div>
 );
 
+primeAudio();
+
 export default function App() {
   return (
     <ErrorBoundary>
+     <BrowserRouter>
       <ThemeProvider>
         <ToastProvider>
           <SiteDataProvider>
            <CustomerProvider>
-            <BrowserRouter>
               <Suspense fallback={<Fallback />}>
                 <Routes>
                   <Route path="/admin/*" element={<AdminApp />} />
@@ -63,11 +66,11 @@ export default function App() {
                   </Route>
                 </Routes>
               </Suspense>
-            </BrowserRouter>
            </CustomerProvider>
           </SiteDataProvider>
         </ToastProvider>
       </ThemeProvider>
+     </BrowserRouter>
     </ErrorBoundary>
   );
 }

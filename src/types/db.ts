@@ -5,7 +5,9 @@ export type RequestType = 'Vehicle Booking' | 'Instant Ride' | 'Offer Enquiry' |
 export type ThemeMode = 'light' | 'dark';
 export type SocialPlatform = 'whatsapp' | 'facebook' | 'instagram' | 'youtube' | 'linkedin';
 export type GallerySection = 'gallery' | 'landing' | 'fleet' | 'destinations' | 'packages';
-export type AdminRole = 'owner' | 'admin';
+/** Staff roles. 'admin' is shown as "Office staff" in the interface. */
+export type AdminRole = 'owner' | 'admin' | 'driver';
+export const ROLE_LABEL: Record<AdminRole, string> = { owner: 'Owner', admin: 'Office staff', driver: 'Driver' };
 
 export const BOOKING_STATUSES: BookingStatus[] = ['Pending', 'Office Calling', 'Confirmed', 'Trip Completed'];
 export const REQUEST_TYPES: RequestType[] = ['Vehicle Booking', 'Instant Ride', 'Offer Enquiry', 'Package Enquiry'];
@@ -55,7 +57,7 @@ export interface Booking extends Timestamps {
   travel_date: string | null; travel_time: string | null; members: number | null;
   round_trip: boolean; return_date: string | null; return_time: string | null;
   ac_preferred: boolean | null; flexible_time: boolean; notes: string | null;
-  customer_id: string | null; vehicle_id: string | null; vehicle_name: string | null; offer_id: string | null; package_id: string | null; subject_title: string | null;
+  customer_id: string | null; driver_id: string | null; vehicle_id: string | null; vehicle_name: string | null; offer_id: string | null; package_id: string | null; subject_title: string | null;
 }
 /** What create_booking() returns to the customer — no internal ids. */
 export type BookingReceipt = Pick<Booking,
@@ -65,9 +67,10 @@ export type BookingReceipt = Pick<Booking,
 
 export interface ContactMessage extends Timestamps { id: string; name: string; email: string; phone: string | null; message: string; is_read: boolean }
 export interface AppNotification extends Timestamps {
-  id: string; kind: 'booking' | 'message' | 'status'; title: string; body: string; booking_id: string | null; message_id: string | null; is_read: boolean;
+  actor_id: string | null;
+  id: string; kind: 'booking' | 'message' | 'status' | 'assignment'; title: string; body: string; booking_id: string | null; message_id: string | null; is_read: boolean;
 }
-export interface AdminUser { user_id: string; email: string; full_name: string; role: AdminRole; created_at: string }
+export interface AdminUser { user_id: string; email: string; full_name: string; phone: string; role: AdminRole; created_at: string }
 export interface DashboardStats {
   total_bookings: number; pending: number; office_calling: number; confirmed: number; completed: number;
   new_messages: number; active_vehicles: number; active_offers: number;
@@ -76,9 +79,12 @@ export interface DashboardStats {
 
 /** A signed-in person (customer or admin). Identity is the Supabase Auth user; phone is profile data only. */
 export interface Profile extends Timestamps { id: string; email: string; full_name: string; phone: string }
-export type CustomerNotificationKind = 'booking' | 'status';
+export type CustomerNotificationKind = 'booking' | 'status' | 'driver';
 export interface CustomerNotification extends Timestamps {
-  id: string; customer_id: string; booking_id: string | null; kind: CustomerNotificationKind; title: string; body: string; is_read: boolean;
+  id: string; customer_id: string; booking_id: string | null; kind: CustomerNotificationKind; title: string; body: string; is_read: boolean; actor_id: string | null;
+}
+export interface DriverNotification extends Timestamps {
+  id: string; driver_id: string; booking_id: string | null; kind: 'assigned' | 'unassigned' | 'updated' | 'status'; title: string; body: string; is_read: boolean; actor_id: string | null;
 }
 /** Outcome of the automatic WhatsApp hand-off after a request is saved. */
 export type WhatsAppLaunch = 'opened' | 'blocked' | 'unavailable';

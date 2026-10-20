@@ -11,7 +11,7 @@ import { EmptyState, ErrorState, Skeleton } from '@/components/ui/Feedback';
 import { supabase, timeoutSignal } from '@/lib/supabase';
 import { formatDate, formatDateTime, formatTime } from '@/utils/format';
 import { validateName, validatePhone } from '@/utils/validation';
-import { BOOKING_STATUSES, REQUEST_TYPES, type Booking, type BookingStatus, type RequestType } from '@/types/db';
+import { BOOKING_STATUSES, REQUEST_TYPES, type AdminUser, type Booking, type BookingStatus, type RequestType } from '@/types/db';
 import { useApiError, useRealtime } from '../data';
 
 const PAGE_SIZE = 25;
@@ -39,7 +39,7 @@ function details(b: Booking): string {
   if (b.request_type === 'Instant Ride') return b.pickup ? `Instant ride from ${b.pickup}${b.destination ? ` to ${b.destination}` : ''}` : 'Instant ride request';
   return b.subject_title || b.request_type;
 }
-function detailRows(b: Booking): [string, string][] {
+function detailRows(b: Booking, driver: string | null): [string, string][] {
   const rows: [string, string | null | undefined][] = [
     ['Reference ID', b.reference], ['Request type', b.request_type], ['Status', b.status], ['Full name', b.customer_name], ['Phone', b.phone], ['Email', b.email],
     ['Pickup location', b.pickup], ['Destination', b.destination], ['Drop-off location', b.dropoff],
@@ -48,6 +48,7 @@ function detailRows(b: Booking): [string, string][] {
     ['Return date', b.return_date ? formatDate(b.return_date) : null], ['Return time', b.return_time ? formatTime(b.return_time) : null],
     ['Selected vehicle', b.request_type === 'Vehicle Booking' ? b.vehicle_name || 'Not chosen — recommend one' : null],
     ['AC preferred', b.ac_preferred === null ? null : b.ac_preferred ? 'Yes' : 'No'],
+    ['Driver', driver],
     ['Package / offer', b.subject_title], ['Special requirements', b.notes], ['Created', formatDateTime(b.created_at)], ['Last updated', formatDateTime(b.updated_at)],
   ];
   return rows.filter((r): r is [string, string] => Boolean(r[1]));
@@ -71,6 +72,8 @@ export default function Bookings() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [statusBusy, setStatusBusy] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [drivers, setDrivers] = useState<AdminUser[]>([]);
+  const [driverBusy, setDriverBusy] = useState<string | null>(null);
   const requestId = useRef(0);
 
   // Debounce typing so each keystroke is not a database query.
@@ -87,6 +90,30 @@ export default function Bookings() {
   useEffect(() => { setLoading(true); void load(); }, [load]);
   // New bookings and status changes from other admins appear without a refresh.
   useRealtime(['bookings'], () => void load());
+
+  // Drivers for the "Driver" dropdown (owner adds them in Staff & Drivers).
+  useEffect(() => {
+    void supabase.rpc('admin_list').then(({ data, error: err }) => {
+      if (err) { console.error('[ijt] could not load drivers', err); return; }
+      setDrivers(((data ?? []) as AdminUser[]).filter((a) => a.role === 'driver'));
+    });
+  }, []);
+  const driverName = useCallback((id: string | null) => {
+    if (!id) return null;
+    const d = drivers.find((x) => x.user_id === id);
+    return d ? d.full_name || d.email : 'Former driver';
+  }, [drivers]);
+
+  const assignDriver = async (b: Booking, driverId: string) => {
+    const next = driverId || null;
+    if (next === b.driver_id) return;
+    setDriverBusy(b.id);
+    const { data, error: err } = await supabase.from('bookings').update({ driver_id: next }).eq('id', b.id).select('id');
+    setDriverBusy(null);
+    if (err || !data?.length) { toast.error('Could not assign the driver', apiError(err ?? { code: '42501' }, 'Please try again.')); return; }
+    setRows((list) => list.map((r) => (r.id === b.id ? { ...r, driver_id: next } : r)));
+    toast.success(next ? 'Driver assigned' : 'Driver removed', next ? `${driverName(next)} has been notified about ${b.reference}.` : `${b.reference} has no driver now.`);
+  };
 
   const setFilter = <K extends keyof Filters>(k: K, v: Filters[K]) => setFilters((f) => ({ ...f, [k]: v }));
   const hasFilters = Object.values(applied).some(Boolean);
@@ -125,7 +152,7 @@ export default function Bookings() {
         ['Full Name', (b) => b.customer_name, 24], ['Phone Number', (b) => b.phone, 18], ['Email', (b) => b.email ?? '', 26],
         ['Pickup Location', (b) => b.pickup ?? '', 26], ['Destination', (b) => b.destination ?? '', 26], ['Drop-off Location', (b) => b.dropoff ?? '', 26],
         ['Pickup Date', (b) => (b.travel_date ? formatDate(b.travel_date) : ''), 14], ['Pickup Time', (b) => (b.travel_time ? formatTime(b.travel_time) : ''), 12],
-        ['Members Count', (b) => b.members ?? '', 10], ['Selected Vehicle', (b) => b.vehicle_name ?? '', 22],
+        ['Members Count', (b) => b.members ?? '', 10], ['Selected Vehicle', (b) => b.vehicle_name ?? '', 22], ['Driver', (b) => driverName(b.driver_id) ?? '', 20],
         ['Round Trip', (b) => (b.request_type === 'Vehicle Booking' ? (b.round_trip ? 'Yes' : 'No') : ''), 10],
         ['Return Date', (b) => (b.return_date ? formatDate(b.return_date) : ''), 14], ['Return Time', (b) => (b.return_time ? formatTime(b.return_time) : ''), 12],
         ['Package/Offer', (b) => b.subject_title ?? '', 24], ['Notes', (b) => b.notes ?? '', 40], ['Created At (IST)', (b) => formatDateTime(b.created_at), 24],
@@ -150,6 +177,15 @@ export default function Bookings() {
       {BOOKING_STATUSES.map((s) => <option key={s}>{s}</option>)}
     </select>
   );
+  const canHaveDriver = (b: Booking) => b.request_type === 'Vehicle Booking' || b.request_type === 'Instant Ride';
+  const driverSelect = (b: Booking) => canHaveDriver(b) ? (
+    <select aria-label={`Driver for ${b.reference}`} className="input min-h-11 w-full min-w-[9.5rem] py-0 text-[13px]" value={b.driver_id ?? ''} disabled={driverBusy === b.id || (!drivers.length && !b.driver_id)}
+      onChange={(e) => void assignDriver(b, e.target.value)}>
+      <option value="">{drivers.length ? 'No driver' : 'No drivers added'}</option>
+      {drivers.map((d) => <option key={d.user_id} value={d.user_id}>{d.full_name || d.email}</option>)}
+      {b.driver_id && !drivers.some((d) => d.user_id === b.driver_id) && <option value={b.driver_id}>Former driver</option>}
+    </select>
+  ) : <span className="text-[13px] text-muted">—</span>;
   const iconBtn = 'grid h-11 w-11 shrink-0 place-items-center rounded-md border border-line bg-card hover:bg-sunken';
   const actions = (b: Booking) => (
     <>
@@ -192,7 +228,7 @@ export default function Bookings() {
             <table className="w-full text-left text-sm">
               <caption className="sr-only">Bookings and enquiries</caption>
               <thead className="border-b border-line bg-surface text-xs text-muted">
-                <tr>{['Reference', 'Type', 'Customer', 'Details', 'Travel date', 'Created', 'Status', 'Actions'].map((h) => <th key={h} scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">{h}</th>)}</tr>
+                <tr>{['Reference', 'Type', 'Customer', 'Details', 'Travel date', 'Created', 'Status', 'Driver', 'Actions'].map((h) => <th key={h} scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">{h}</th>)}</tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {rows.map((b) => {
@@ -206,6 +242,7 @@ export default function Bookings() {
                       <td className="whitespace-nowrap px-4 py-3 text-muted">{b.travel_date ? <>{formatDate(b.travel_date)}<span className="block text-[13px]">{formatTime(b.travel_time)}</span></> : '—'}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-[13px] text-muted">{formatDateTime(b.created_at)}</td>
                       <td className="px-4 py-3">{statusSelect(b)}</td>
+                      <td className="px-4 py-3">{driverSelect(b)}</td>
                       <td className="px-4 py-3"><div className="flex gap-1.5">{actions(b)}</div></td>
                     </tr>
                   );
@@ -228,7 +265,8 @@ export default function Bookings() {
                     <div className="min-w-0 text-[13px]"><p className="font-semibold">{details(b)}</p>
                       <p className="text-muted">{[b.travel_date ? formatDate(b.travel_date) : b.request_type, b.vehicle_name, formatDateTime(b.created_at)].filter(Boolean).join(' · ')}</p></div>
                   </div>
-                  <div className="mt-3 flex items-center gap-1.5"><div className="min-w-0 flex-1">{statusSelect(b)}</div>{actions(b)}</div>
+                  <div className="mt-3 grid gap-2 xs:grid-cols-2">{statusSelect(b)}{canHaveDriver(b) && driverSelect(b)}</div>
+                  <div className="mt-2 flex justify-end gap-1.5">{actions(b)}</div>
                 </li>
               );
             })}
@@ -245,7 +283,7 @@ export default function Bookings() {
 
       <Modal open={viewing !== null} onClose={() => setViewing(null)} title={`${viewing?.reference ?? ''} details`}
         footer={<><Button variant="secondary" onClick={() => setViewing(null)}>Close</Button><Button onClick={() => { setEditing(viewing); setViewing(null); }}>Edit</Button></>}>
-        {viewing && <dl className="divide-y divide-line text-sm">{detailRows(viewing).map(([k, v]) => <div key={k} className="flex justify-between gap-4 py-2.5"><dt className="shrink-0 text-muted">{k}</dt><dd className="min-w-0 whitespace-pre-line break-words text-right font-medium">{v}</dd></div>)}</dl>}
+        {viewing && <dl className="divide-y divide-line text-sm">{detailRows(viewing, driverName(viewing.driver_id)).map(([k, v]) => <div key={k} className="flex justify-between gap-4 py-2.5"><dt className="shrink-0 text-muted">{k}</dt><dd className="min-w-0 whitespace-pre-line break-words text-right font-medium">{v}</dd></div>)}</dl>}
       </Modal>
       {editing && <EditBooking booking={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void load(); }} />}
       <ConfirmDialog open={deleting !== null} onCancel={() => setDeleting(null)} onConfirm={() => void confirmDelete()} busy={deleteBusy} error={deleteError}

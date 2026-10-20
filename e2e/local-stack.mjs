@@ -2,17 +2,22 @@
 //   /rest/v1/*    -> a real PostgREST in front of a real Postgres running the real migrations + RLS
 //   /auth/v1/*    -> minimal password sign-in that issues JWTs PostgREST verifies (test accounts only)
 //   /storage/v1/* -> in-memory object store that applies the same admin-only rule as the storage policies
-// Realtime is not emulated. This file is test tooling and is never part of the production build.
+//   /realtime/v1  -> postgres_changes emulator (e2e/realtime.mjs) that applies RLS per subscriber
+// This file is test tooling and is never part of the production build.
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import { attachRealtime } from './realtime.mjs';
 
 const SECRET = process.env.JWT_SECRET;
 const POSTGREST = process.env.POSTGREST_URL ?? 'http://127.0.0.1:3001';
 const PORT = Number(process.env.PORT ?? 54321);
 const USERS = {
   'owner@test.local': { id: '00000000-0000-0000-0000-0000000000aa', password: 'correct-horse-battery' },
+  'office@test.local': { id: '00000000-0000-0000-0000-0000000000cc', password: 'office-password-123' },
+  'driver@test.local': { id: '00000000-0000-0000-0000-0000000000dd', password: 'driver-password-123' },
   'visitor@test.local': { id: '00000000-0000-0000-0000-0000000000bb', password: 'visitor-password-123' },
 };
 const b64 = (o) => Buffer.from(typeof o === 'string' ? o : JSON.stringify(o)).toString('base64url');
@@ -28,6 +33,17 @@ function verify(token) {
   } catch { return null; }
 }
 const objects = new Map();
+// Preload generated fixture photos (e2e/fixture-images/<bucket>/<path>) so screenshots look realistic.
+const FIXTURES = new URL('./fixture-images/', import.meta.url).pathname;
+(function preload(dir) {
+  try {
+    for (const name of readdirSync(dir)) {
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) preload(full);
+      else objects.set(relative(FIXTURES, full), { data: readFileSync(full), type: 'image/webp' });
+    }
+  } catch { /* no fixture images */ }
+})(FIXTURES);
 const refreshTokens = new Map();
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*', 'access-control-expose-headers': '*' };
 const json = (res, status, body) => { res.writeHead(status, { ...cors, 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
@@ -40,7 +56,7 @@ async function isAdmin(authorization) {
 
 if (process.argv[2] === 'anon-key') { console.log(sign({ role: 'anon', iss: 'local', exp: 4102444800 })); process.exit(0); }
 
-http.createServer(async (req, res) => {
+const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end(); }
   const body = await read(req);
@@ -127,4 +143,10 @@ http.createServer(async (req, res) => {
     }
     json(res, 404, { message: 'not emulated' });
   } catch (err) { console.error(err); json(res, 500, { message: String(err) }); }
-}).listen(PORT, () => console.log(`local stack on :${PORT}`));
+});
+attachRealtime(server, {
+  postgrest: POSTGREST, verify,
+  dbUrl: process.env.REALTIME_DB_URL ?? `postgres://authenticator:authenticator@127.0.0.1:5432/${process.env.E2E_DB ?? 'ijt_e2e'}`,
+  log: process.env.REALTIME_LOG ? (m) => console.log(`[realtime] ${m}`) : undefined,
+});
+server.listen(PORT, () => console.log(`local stack on :${PORT}`));

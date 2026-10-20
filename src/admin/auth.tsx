@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Navigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { forgetThisDevice } from '@/lib/push';
 import type { AdminRole } from '@/types/db';
 
 type Status = 'loading' | 'signedOut' | 'admin';
@@ -23,11 +24,9 @@ export class AuthError extends Error {}
  * Nothing in the browser can grant access — hiding the UI is a convenience, RLS is the lock.
  */
 async function fetchRole(): Promise<AdminRole | null> {
-  const { data: isAdmin, error } = await supabase.rpc('is_admin');
+  const { data, error } = await supabase.rpc('my_staff_role');
   if (error) throw error;
-  if (!isAdmin) return null;
-  const { data: isOwner } = await supabase.rpc('is_owner');
-  return isOwner ? 'owner' : 'admin';
+  return data === 'owner' || data === 'admin' || data === 'driver' ? data : null;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -80,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!r) {
       intentional.current = true;
       await supabase.auth.signOut();
-      throw new AuthError('This account does not have admin access.');
+      throw new AuthError('This account does not have staff access. Ask the owner to add you in Staff & Drivers.');
     }
     setExpired(false);
     setEmail(data.session.user.email ?? null); setUserId(data.session.user.id); setRole(r); setStatus('admin');
@@ -89,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     intentional.current = true;
     setExpired(false);
+    await forgetThisDevice(supabase);   // stop this device's notifications for this person (needs the session)
     const { error } = await supabase.auth.signOut();
     if (error) { console.error('[ijt] sign out failed', error); await supabase.auth.signOut({ scope: 'local' }); }
     clear();
