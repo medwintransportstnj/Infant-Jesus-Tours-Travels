@@ -10,11 +10,11 @@ import { supabase, timeoutSignal } from '@/lib/supabase';
 import { formatDateTime } from '@/utils/format';
 import { buildWhatsAppUrl } from '@/utils/whatsapp';
 import { EMAIL_RE, PHONE_RE } from '@/utils/validation';
-import type { AdminRole, AdminUser, PageContent, SeoSettings, SiteSettings, SocialLink, SocialPlatform, ThemeMode } from '@/types/db';
+import { ROLE_LABEL, type AdminRole, type AdminUser, type PageContent, type SeoSettings, type SiteSettings, type SocialLink, type SocialPlatform, type ThemeMode } from '@/types/db';
 import { useAuth } from '../auth';
 import { ImageUploader } from '../components/ImageUploader';
 import { PageIntro } from '../components/ResourcePage';
-import { NO_IMAGE_CHANGE, persistWithImage, uploadErrorMessage, useApiError, useRealtime, useTable, type ImageDraft } from '../data';
+import { NO_IMAGE_CHANGE, persistWithImage, uploadErrorMessage, useApiError, useTable, type ImageDraft } from '../data';
 
 /** Loads and saves a one-row settings table (id = 1). */
 function useSingleton<T extends { id: number }>(table: string) {
@@ -319,11 +319,17 @@ export function PagesAdmin() {
 }
 
 // ---------------- Admin management ----------------
+const ROLE_HELP: Record<AdminRole, string> = {
+  owner: 'Everything, including website settings and staff.',
+  admin: 'Bookings, enquiries, messages and website content. No settings.',
+  driver: 'Only the trips assigned to them, on their phone.',
+};
+
 export function AdminsPage() {
   const { role, userId, email } = useAuth();
   const toast = useToast();
   const apiError = useApiError();
-  const [admins, setAdmins] = useState<AdminUser[]>([]);
+  const [staff, setStaff] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState('');
@@ -333,6 +339,10 @@ export function AdminsPage() {
   const [revoking, setRevoking] = useState<AdminUser | null>(null);
   const [revokeBusy, setRevokeBusy] = useState(false);
   const [revokeError, setRevokeError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<AdminUser | null>(null);
+  const [edit, setEdit] = useState({ full_name: '', phone: '' });
+  const [editBusy, setEditBusy] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const [pw, setPw] = useState({ next: '', confirm: '' });
   const [pwBusy, setPwBusy] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
@@ -340,12 +350,11 @@ export function AdminsPage() {
 
   const load = useCallback(async () => {
     const { data, error: err } = await supabase.rpc('admin_list');
-    if (err) setError(apiError(err, 'Could not load the admin list.'));
-    else { setAdmins((data ?? []) as AdminUser[]); setError(null); }
+    if (err) setError(apiError(err, 'Could not load the staff list.'));
+    else { setStaff((data ?? []) as AdminUser[]); setError(null); }
     setLoading(false);
   }, [apiError]);
   useEffect(() => { void load(); }, [load]);
-  useRealtime(['profiles'], () => void load());
 
   const grant = async (e: FormEvent) => {
     e.preventDefault();
@@ -354,8 +363,18 @@ export function AdminsPage() {
     setGranting(true); setGrantError(null);
     const { error: err } = await supabase.rpc('admin_grant', { p_email: newEmail.trim(), p_role: newRole });
     setGranting(false);
-    if (err) { setGrantError(apiError(err, 'Could not grant access. Please try again.')); return; }
-    toast.success('Admin access granted', newEmail.trim()); setNewEmail(''); void load();
+    if (err) { setGrantError(apiError(err, 'Could not add this person. Please try again.')); return; }
+    toast.success(`${ROLE_LABEL[newRole]} added`, newEmail.trim()); setNewEmail(''); void load();
+  };
+  const saveEdit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editing || editBusy) return;
+    if (edit.phone.trim() && !PHONE_RE.test(edit.phone.trim())) { setEditError('Enter a valid phone number.'); return; }
+    setEditBusy(true); setEditError(null);
+    const { error: err } = await supabase.rpc('admin_update_staff', { p_user_id: editing.user_id, p_full_name: edit.full_name, p_phone: edit.phone });
+    setEditBusy(false);
+    if (err) { setEditError(apiError(err, 'Could not save. Please try again.')); return; }
+    toast.success('Details saved'); setEditing(null); void load();
   };
   const changePassword = async (e: FormEvent) => {
     e.preventDefault();
@@ -369,38 +388,64 @@ export function AdminsPage() {
     setPw({ next: '', confirm: '' }); toast.success('Password changed');
   };
 
+  const groups: { role: AdminRole; title: string }[] = [
+    { role: 'owner', title: 'Owners' }, { role: 'admin', title: 'Office staff' }, { role: 'driver', title: 'Drivers' },
+  ];
+
   return (
     <div className="flex flex-col gap-5">
-      <Panel title="Authorized accounts" description="Access is granted per account and checked by the database on every request. Use the least access each person needs.">
+      <Panel title="Staff & drivers" description="Each person signs in at /admin with their own email and password and sees only what their role allows. The database checks the role on every request.">
         {loading ? <Skeleton className="h-20 w-full" /> : error ? <ErrorState message={error} onRetry={() => void load()} /> : (
-          <ul className="divide-y divide-line">
-            {admins.map((a) => (
-              <li key={a.user_id} className="flex items-center justify-between gap-3 py-3 first:pt-0">
-                <div className="min-w-0">
-                  <p className="flex flex-wrap items-center gap-2 text-sm font-semibold"><span className="break-all">{a.email}</span>{a.user_id === userId && <Badge tone="info">You</Badge>}</p>
-                  <p className="text-[13px] text-muted">Added {formatDateTime(a.created_at)}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Badge tone={a.role === 'owner' ? 'accent' : 'neutral'} icon={a.role === 'owner' ? <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> : undefined}>{a.role === 'owner' ? 'Owner' : 'Admin'}</Badge>
-                  {isOwner && a.user_id !== userId && (
-                    <button type="button" onClick={() => { setRevokeError(null); setRevoking(a); }} aria-label={`Remove access for ${a.email}`} className="grid h-11 w-11 place-items-center rounded-md border border-line text-danger hover:bg-danger-soft"><Trash2 className="h-4 w-4" aria-hidden /></button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="flex flex-col gap-5">
+            {groups.map((g) => {
+              const people = staff.filter((a) => a.role === g.role);
+              return (
+                <section key={g.role} aria-label={g.title}>
+                  <div className="mb-1 flex items-baseline justify-between gap-3">
+                    <h3 className="text-sm font-semibold">{g.title} <span className="font-normal text-muted">({people.length})</span></h3>
+                    <p className="hidden text-xs text-muted sm:block">{ROLE_HELP[g.role]}</p>
+                  </div>
+                  {people.length ? (
+                    <ul className="divide-y divide-line rounded-lg border border-line">
+                      {people.map((a) => (
+                        <li key={a.user_id} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                          <div className="min-w-0">
+                            <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">{a.full_name || a.email}{a.user_id === userId && <Badge tone="info">You</Badge>}</p>
+                            <p className="truncate text-[13px] text-muted">{a.full_name ? `${a.email} · ` : ''}{a.phone || 'No phone'} · added {formatDateTime(a.created_at)}</p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            {g.role === 'owner' && <ShieldCheck className="h-4 w-4 text-accent-text" aria-label="Owner" />}
+                            {isOwner && (
+                              <button type="button" onClick={() => { setEditError(null); setEdit({ full_name: a.full_name, phone: a.phone }); setEditing(a); }} aria-label={`Edit ${a.email}`}
+                                className="grid h-11 w-11 place-items-center rounded-md border border-line hover:bg-sunken"><Pencil className="h-4 w-4" aria-hidden /></button>
+                            )}
+                            {isOwner && a.user_id !== userId && (
+                              <button type="button" onClick={() => { setRevokeError(null); setRevoking(a); }} aria-label={`Remove access for ${a.email}`} className="grid h-11 w-11 place-items-center rounded-md border border-line text-danger hover:bg-danger-soft"><Trash2 className="h-4 w-4" aria-hidden /></button>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <p className="rounded-lg border border-dashed border-line px-3 py-3 text-[13px] text-muted">No {g.title.toLowerCase()} yet.</p>}
+                </section>
+              );
+            })}
+          </div>
         )}
       </Panel>
-      {isOwner ? (
-        <Panel title="Grant admin access" description="First create or invite the person in Supabase → Authentication → Users. Then enter the same email here.">
-          <form onSubmit={grant} noValidate className="grid gap-4 sm:grid-cols-[1fr_10rem_auto] sm:items-end">
+      {isOwner && (
+        <Panel title="Add a person" description="1. Create their login in Supabase → Authentication → Users (tick Auto Confirm). 2. Enter the same email here and choose their role.">
+          <form onSubmit={grant} noValidate className="grid gap-4 sm:grid-cols-[1fr_12rem_auto] sm:items-end">
             <Field label="Email"><input className="input" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="person@example.com" /></Field>
-            <Field label="Role"><select className="input" value={newRole} onChange={(e) => setNewRole(e.target.value as AdminRole)}><option value="admin">Admin</option><option value="owner">Owner</option></select></Field>
-            <Button type="submit" loading={granting} loadingText="Granting…" icon={<UserPlus className="h-4 w-4" aria-hidden />}>Add Admin</Button>
+            <Field label="Role"><select className="input" value={newRole} onChange={(e) => setNewRole(e.target.value as AdminRole)}>
+              <option value="admin">Office staff</option><option value="driver">Driver</option><option value="owner">Owner</option>
+            </select></Field>
+            <Button type="submit" loading={granting} loadingText="Adding…" icon={<UserPlus className="h-4 w-4" aria-hidden />}>Add {ROLE_LABEL[newRole]}</Button>
+            <p className="-mt-1 text-[13px] text-muted sm:col-span-3"><span className="font-semibold text-ink">{ROLE_LABEL[newRole]}:</span> {ROLE_HELP[newRole]}</p>
           </form>
           <div className="mt-3"><FormError>{grantError}</FormError></div>
         </Panel>
-      ) : <p className="max-w-3xl text-sm text-muted">Only an owner can add or remove admin accounts.</p>}
+      )}
       <Panel title="Change your password" description={`Signed in as ${email ?? ''}.`}>
         <form onSubmit={changePassword} noValidate className="grid gap-4 sm:grid-cols-2">
           <Field label="New password" hint="At least 10 characters."><input className="input" type="password" autoComplete="new-password" value={pw.next} onChange={(e) => setPw((p) => ({ ...p, next: e.target.value }))} /></Field>
@@ -409,8 +454,16 @@ export function AdminsPage() {
           <div><Button type="submit" variant="secondary" loading={pwBusy} loadingText="Updating…">Update password</Button></div>
         </form>
       </Panel>
+      <Modal open={editing !== null} onClose={() => setEditing(null)} busy={editBusy} title={`Edit ${editing ? ROLE_LABEL[editing.role].toLowerCase() : ''}`} description={editing?.email}>
+        <form onSubmit={saveEdit} noValidate className="flex flex-col gap-4">
+          <Field label="Name" hint="Shown to the office and, for drivers, to the customer."><input className="input" value={edit.full_name} maxLength={120} onChange={(e) => setEdit((p) => ({ ...p, full_name: e.target.value }))} /></Field>
+          <Field label="Phone"><input className="input" type="tel" value={edit.phone} maxLength={20} onChange={(e) => setEdit((p) => ({ ...p, phone: e.target.value }))} /></Field>
+          <FormError>{editError}</FormError>
+          <div className="grid grid-cols-2 gap-2.5"><Button variant="secondary" onClick={() => setEditing(null)} disabled={editBusy}>Cancel</Button><Button type="submit" loading={editBusy} loadingText="Saving…">Save</Button></div>
+        </form>
+      </Modal>
       <ConfirmDialog open={revoking !== null} onCancel={() => setRevoking(null)} busy={revokeBusy} error={revokeError} confirmLabel="Remove access"
-        title="Remove admin access?" message={`${revoking?.email ?? 'This account'} will no longer be able to open the dashboard. Their login itself is not deleted.`}
+        title="Remove access?" message={`${revoking?.email ?? 'This account'} will no longer be able to open the dashboard${revoking?.role === 'driver' ? ' or see their trips' : ''}. Their login itself is not deleted.`}
         onConfirm={async () => {
           if (!revoking) return;
           setRevokeBusy(true); setRevokeError(null);

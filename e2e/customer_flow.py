@@ -36,11 +36,11 @@ with sync_playwright() as p:
     logo = page.locator("header img").first
     check("A: header shows the official logo, undistorted", logo.get_attribute("src") == "/ijt-logo.png" and logo.evaluate("e => e.naturalWidth > 0 && getComputedStyle(e).objectFit === 'contain'"))
     check("A: footer shows the logo", page.locator("footer img").first.get_attribute("src") == "/ijt-logo.png")
-    check("A: favicon + apple-touch-icon use the logo", page.locator('link[rel=icon]').get_attribute("href") == "/ijt-logo.png" and page.locator('link[rel=apple-touch-icon]').get_attribute("href") == "/ijt-logo.png")
+    check("A: favicon + apple-touch-icon use the logo", page.locator('link[rel=icon]').get_attribute("href") == "/ijt-logo.png" and page.locator("link[rel=apple-touch-icon]").get_attribute("href") == "/icons/icon-192.png")
     check("A: no Admin link anywhere on the public page", page.locator('a[href^="/admin"]').count() == 0 and page.get_by_role("link", name="Admin").count() == 0)
     check("A: Local · Outstation · Pilgrimage badge is gone", page.get_by_text("Local · Outstation · Pilgrimage").count() == 0)
     dev = page.get_by_role("region", name="Website developed by")
-    check("A: developer box shows the exact name and company", dev.get_by_text("Medwin Levay E", exact=True).is_visible() and dev.get_by_text("Medwin Montage | Freelancing Creative & Digital Services", exact=True).is_visible() and dev.get_by_text("Thanjavur, Tamilnadu · Providing Service Across World").is_visible())
+    check("A: developer box shows the exact name and company", dev.get_by_text("Medwin Levay E Freelancer", exact=True).is_visible() and dev.get_by_text("Medwin Montage | Freelancing Creative & Digital Services", exact=True).is_visible() and dev.get_by_text("Thanjavur, Tamilnadu · Providing Service Across Tamilnadu").is_visible())
     hrefs = dev.locator("a").evaluate_all("els => els.map(e => e.getAttribute('href'))")
     q = urllib.parse.quote(MSG, safe="!'()*~-_.")
     check("B: developer phone link", hrefs[0] == "tel:+919487897160", hrefs[0])

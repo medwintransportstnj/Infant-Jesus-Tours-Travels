@@ -11,4 +11,4 @@ $PSQL -d "$DB" -f tests/00_supabase_stubs.sql
 for f in migrations/*.sql; do echo "migrating $f"; $PSQL -d "$DB" -f "$f"; done
 $PSQL -d "$DB" -f seed.sql
 $PSQL -d "$DB" -f seed.sql   # idempotency check
-for f in tests/01_security_and_booking.sql tests/02_customers.sql; do $PSQL -d "$DB" -f "$f" 2>&1 | grep -E "PASS|FAIL|ERROR|ALL "; done
+for f in tests/01_security_and_booking.sql tests/02_customers.sql tests/03_staff_roles.sql; do $PSQL -d "$DB" -f "$f" 2>&1 | grep -E "PASS|FAIL|ERROR|ALL "; done

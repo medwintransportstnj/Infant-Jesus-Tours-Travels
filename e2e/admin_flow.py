@@ -39,7 +39,7 @@ with sync_playwright() as p:
     expect(page.get_by_role("alert")).to_contain_text("Incorrect email or password")
     check("auth: wrong password rejected", True)
     login(page, "visitor@test.local", "visitor-password-123")
-    expect(page.get_by_role("alert")).to_contain_text("does not have admin access")
+    expect(page.get_by_role("alert")).to_contain_text("does not have staff access")
     check("auth: valid login without admin role is refused", "/admin/login" in page.url)
     login(page, "owner@test.local", "correct-horse-battery")
     expect(page.get_by_role("heading", name="Bookings & Enquiries")).to_be_visible()
@@ -204,9 +204,9 @@ with sync_playwright() as p:
     check("theme: a new visitor gets the site default", fresh.evaluate("document.documentElement.classList.contains('dark')"))
 
     page.goto(f"{BASE}/admin/admins", wait_until="networkidle")
-    page.get_by_label("Email").fill("visitor@test.local"); page.get_by_role("button", name="Add Admin").click()
-    expect(page.get_by_text("Admin access granted")).to_be_visible()
-    check("admins: owner grants access", sql("select count(*) from admins") == "2")
+    page.get_by_label("Email").fill("visitor@test.local"); page.get_by_role("button", name="Add Office staff").click()
+    expect(page.get_by_text("Office staff added")).to_be_visible()
+    check("admins: owner grants access", sql("select count(*) from admins") == "4")
     page.screenshot(path=f"{SHOTS}/admin-admins.png", full_page=True)
 
     # --- mobile layout + logout ---

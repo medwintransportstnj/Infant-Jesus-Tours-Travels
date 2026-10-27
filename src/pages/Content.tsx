@@ -50,7 +50,7 @@ export function Offers() {
                 <h2 className="mt-3 text-xl">{o.title}</h2>
                 {o.description && <p className="mt-1.5 text-sm text-muted">{o.description}</p>}
                 <p className="mt-2 text-[13px] text-muted">Valid until {formatDate(o.expires_on)}</p>
-                <div className="mt-5 flex flex-col gap-2.5 xs:flex-row">
+                <div className="mt-5 flex flex-wrap gap-2.5">
                   <Link to="/book" className="btn-primary">Book Now</Link>
                   <Button variant="secondary" onClick={() => setEnquiry({ kind: 'offer', id: o.id, title: o.title })} icon={<MessageCircle className="h-4 w-4" aria-hidden />}>Enquire on WhatsApp</Button>
                 </div>
@@ -137,7 +137,7 @@ export function About() {
               <li key={t} className="flex items-start gap-2.5 text-sm"><span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-success-soft text-success"><Check className="h-3 w-3" aria-hidden /></span>{t}</li>
             ))}
           </ul>
-          <div className="mt-6 flex flex-col gap-2.5 xs:flex-row">
+          <div className="mt-6 flex flex-wrap gap-2.5">
             <Link to="/book" className="btn-primary">Book a Vehicle</Link>
             <Link to="/contact" className="btn-secondary">Contact Us</Link>
           </div>

@@ -5,11 +5,11 @@ import { buildWhatsAppUrl } from '@/utils/whatsapp';
 // The WEBSITE DEVELOPER's contact details. These are fixed and belong to the developer — they are
 // unrelated to the travel company's own number, which always comes from Admin → WhatsApp & Social.
 const DEVELOPER = {
-  name: 'Medwin Levay E',
+  name: 'Medwin Levay E Freelancer',
   company: 'Medwin Montage | Freelancing Creative & Digital Services',
   phone: '+91 9487897160',
   location: 'Thanjavur, Tamilnadu',
-  serviceArea: 'Providing Service Across World',
+  serviceArea: 'Providing Service Across Tamilnadu',
   message: 'Hi, I saw Infant Jesus Tours & Travels Website and would like to know more about your services.',
 } as const;
 

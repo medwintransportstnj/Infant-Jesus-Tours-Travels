@@ -10,6 +10,8 @@ import { useToast } from '@/components/ui/Toast';
 import { ErrorState, Skeleton } from '@/components/ui/Feedback';
 import { friendlyError } from '@/lib/errors';
 import { siteClient, timeoutSignal } from '@/lib/supabase';
+import { subscribeLive } from '@/lib/live';
+import { LiveIndicator, PushToggle } from '@/components/ui/LiveControls';
 import { formatDate, formatDateTime, formatTime, timeAgo } from '@/utils/format';
 import { validateName, validatePhone } from '@/utils/validation';
 import type { Booking } from '@/types/db';
@@ -46,10 +48,7 @@ export default function Account() {
     if (!userId) return;
     void load();
     // Status changes made by the office arrive live; the list refreshes without a reload.
-    const channel = siteClient.channel(`customer-bookings-${userId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `customer_id=eq.${userId}` }, () => void load())
-      .subscribe();
-    return () => { void siteClient.removeChannel(channel); };
+    return subscribeLive(siteClient, 'customer-bookings', [{ table: 'bookings', filter: `customer_id=eq.${userId}` }], () => void load(), () => void load());
   }, [userId, load]);
   // A status notification also means a booking changed — keeps history fresh even if the bookings event is missed.
   const latest = customer.notifications[0]?.id;
@@ -107,12 +106,13 @@ export default function Account() {
                 ))}
               </ul>
             ) : <p className="flex items-center gap-2 py-4 text-sm text-muted"><Bell className="h-4 w-4" aria-hidden />No notifications yet.</p>}
+            <div className="mt-3 border-t border-line pt-2"><PushToggle client={siteClient} userId={userId} /></div>
           </section>
         </div>
 
         <section aria-labelledby="history-heading">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 id="history-heading" className="text-base">Booking history</h2>
+            <div className="flex items-center gap-2.5"><h2 id="history-heading" className="text-base">Booking history</h2><LiveIndicator /></div>
             <Link to="/book" className="btn-primary btn-sm">New booking</Link>
           </div>
           {loading ? <div className="space-y-3" role="status" aria-label="Loading bookings"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>

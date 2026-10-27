@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, CalendarCheck, Check, Mail, Map, MapPin, MessageCircle, MessageSquareDashed, Phone, Search, Star, Ticket, Zap } from 'lucide-react';
+import {
+  ArrowRight, CalendarCheck, CarFront, CheckCircle2, Mail, MapPin, MessageCircle, Phone, PhoneCall, Quote, Search, Star, Ticket, Zap,
+} from 'lucide-react';
 import { Seo } from '@/components/site/Seo';
 import { DestinationCard, PackageCard, SectionHeading, VehicleCard } from '@/components/site/Parts';
 import { EnquiryDialog, type EnquirySubject } from '@/components/site/EnquiryDialog';
@@ -8,42 +10,40 @@ import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { Toggle } from '@/components/ui/Toggle';
 import { LocationInput } from '@/components/ui/LocationInput';
-import { InfoBadge, Badge } from '@/components/ui/Badge';
 import { ErrorState, ImageBox, SkeletonGrid } from '@/components/ui/Feedback';
 import { useSiteData } from '@/hooks/useSiteData';
 import { useContact } from '@/hooks/useContact';
 import { publicImageUrl } from '@/lib/supabase';
-import { daysLeft, todayIST } from '@/utils/format';
+import { daysLeft, formatDate, todayIST } from '@/utils/format';
 import { validateJourney, type JourneyErrors } from '@/utils/validation';
 import type { GalleryItem } from '@/types/db';
 
-function HeroMedia({ items }: { items: GalleryItem[] }) {
+/** Full-bleed hero photo(s) from Admin → Gallery → "Landing Page". Cross-fades when there is more than one. */
+function HeroBackdrop({ items }: { items: GalleryItem[] }) {
   const [index, setIndex] = useState(0);
   useEffect(() => {
     if (items.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const t = window.setInterval(() => setIndex((i) => (i + 1) % items.length), 5000);
+    const t = window.setInterval(() => setIndex((i) => (i + 1) % items.length), 6000);
     return () => window.clearInterval(t);
   }, [items.length]);
-  if (!items.length) return <ImageBox src={null} alt="" placeholder="Travel photo" ratio="aspect-[4/3] lg:aspect-[3/2]" rounded="rounded-xl" className="border border-line" />;
   return (
-    <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line bg-sunken lg:aspect-[3/2]">
+    <div aria-hidden className="absolute inset-0 overflow-hidden bg-inverse">
       {items.map((m, i) => (
-        <img key={m.id} src={publicImageUrl('gallery-images', m.image_path) ?? ''} alt={i === index ? m.caption : ''} aria-hidden={i !== index}
+        <img key={m.id} src={publicImageUrl('gallery-images', m.image_path) ?? ''} alt=""
           loading={i === 0 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : undefined} decoding="async"
-          className="absolute inset-0 h-full w-full object-cover transition-opacity duration-1000"
+          className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[1500ms]"
           style={{ opacity: i === index ? m.opacity / 100 : 0 }} />
       ))}
+      {/* Without a photo the hero is the brand: charcoal with a soft red glow. */}
+      {!items.length && <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_85%_10%,rgb(var(--accent)/0.45),transparent_55%)]" />}
+      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/15" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/50 to-transparent" />
     </div>
   );
 }
 
-function SectionBanner({ items }: { items: GalleryItem[] }) {
-  const m = items[0];
-  if (!m) return null;
-  return <ImageBox src={publicImageUrl('gallery-images', m.image_path)} alt={m.caption} opacity={m.opacity} ratio="aspect-[5/1] min-h-[96px]" rounded="rounded-xl" className="mb-8" />;
-}
-
-function JourneyWidget() {
+/** Route search that starts the booking flow at step 2 with the journey already filled in. */
+function JourneySearch() {
   const navigate = useNavigate();
   const [f, setF] = useState({ pickup: '', destination: '', date: '', time: '', members: '', roundTrip: false, returnDate: '', returnTime: '' });
   const [errors, setErrors] = useState<JourneyErrors>({});
@@ -57,36 +57,40 @@ function JourneyWidget() {
     navigate('/book', { state: { draft: f, startAt: 2 } });
   };
   return (
-    <form onSubmit={submit} noValidate aria-labelledby="plan-heading" className="card relative z-10 p-4 shadow-lift sm:p-6">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h2 id="plan-heading" className="text-lg">Plan your journey</h2>
-          <p className="text-[13px] text-muted">Tell us where and when you would like to travel.</p>
-        </div>
-        <InfoBadge>Step 1 of 5</InfoBadge>
+    <form onSubmit={submit} noValidate aria-labelledby="plan-heading" className="relative z-10 rounded-3xl border border-line bg-card p-4 shadow-lift sm:p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 id="plan-heading" className="text-lg sm:text-xl">Where are you travelling?</h2>
+        <Toggle checked={f.roundTrip} onChange={(v) => set('roundTrip', v)} label="Round trip" />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.2fr_1.2fr_1fr_1fr_1fr]">
-        <Field label="Pickup location" required error={errors.pickup}><LocationInput value={f.pickup} onChange={(v) => set('pickup', v)} placeholder="Enter pickup" /></Field>
-        <Field label="Destination" required error={errors.destination}><LocationInput value={f.destination} onChange={(v) => set('destination', v)} placeholder="Where are you going?" /></Field>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-[1.25fr_1.25fr_1fr_0.9fr_0.85fr_auto] lg:items-start">
+        <Field label="From" required error={errors.pickup} className="col-span-2 sm:col-span-1"><LocationInput value={f.pickup} onChange={(v) => set('pickup', v)} placeholder="Pickup city or place" /></Field>
+        <Field label="To" required error={errors.destination} className="col-span-2 sm:col-span-1"><LocationInput value={f.destination} onChange={(v) => set('destination', v)} placeholder="Destination" /></Field>
         <Field label="Date" required error={errors.date}><input type="date" className="input" min={today} value={f.date} onChange={(e) => set('date', e.target.value)} /></Field>
         <Field label="Time" required error={errors.time}><input type="time" className="input" value={f.time} onChange={(e) => set('time', e.target.value)} /></Field>
-        <Field label="Members" required error={errors.members} className="sm:col-span-2 lg:col-span-1">
-          <input type="number" inputMode="numeric" min={1} max={500} className="input" value={f.members} onChange={(e) => set('members', e.target.value)} placeholder="Number of members" />
+        <Field label="Members" required error={errors.members} className="col-span-2 sm:col-span-1">
+          <input type="number" inputMode="numeric" min={1} max={500} className="input" value={f.members} onChange={(e) => set('members', e.target.value)} placeholder="People" />
         </Field>
+        <div className="col-span-2 sm:col-span-1 sm:pt-[26px] lg:col-span-1">
+          <Button type="submit" block className="min-h-12 lg:w-auto lg:px-6" icon={<Search className="h-4 w-4" aria-hidden />}>Find a Vehicle</Button>
+        </div>
       </div>
-      <div className="mt-4 grid items-end gap-4 sm:grid-cols-2 lg:grid-cols-[auto_1fr_1fr_2fr]">
-        <Toggle checked={f.roundTrip} onChange={(v) => set('roundTrip', v)} label="Round trip" />
-        {f.roundTrip ? (
-          <>
-            <Field label="Return date" required error={errors.returnDate}><input type="date" className="input" min={f.date || today} value={f.returnDate} onChange={(e) => set('returnDate', e.target.value)} /></Field>
-            <Field label="Return time" required error={errors.returnTime}><input type="time" className="input" value={f.returnTime} onChange={(e) => set('returnTime', e.target.value)} /></Field>
-          </>
-        ) : <span className="hidden lg:col-span-2 lg:block" />}
-        <Button type="submit" block className={f.roundTrip ? '' : 'sm:col-start-2 lg:col-start-4'} icon={<Search className="h-4 w-4" aria-hidden />}>Find a Vehicle</Button>
-      </div>
+      {f.roundTrip && (
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:max-w-md">
+          <Field label="Return date" required error={errors.returnDate}><input type="date" className="input" min={f.date || today} value={f.returnDate} onChange={(e) => set('returnDate', e.target.value)} /></Field>
+          <Field label="Return time" required error={errors.returnTime}><input type="time" className="input" value={f.returnTime} onChange={(e) => set('returnTime', e.target.value)} /></Field>
+        </div>
+      )}
     </form>
   );
 }
+
+// "How booking works" mirrors the real booking statuses, so it is a true sequence.
+const STEPS = [
+  { Icon: CalendarCheck, title: 'Send your trip', body: 'Tell us the route, date and number of people. You get a booking reference straight away.' },
+  { Icon: PhoneCall, title: 'Our office calls you', body: 'We confirm the vehicle, timing and fare with you by phone or WhatsApp.' },
+  { Icon: CheckCircle2, title: 'Booking confirmed', body: 'You are notified the moment it is confirmed, and again when your driver is assigned.' },
+  { Icon: CarFront, title: 'Travel', body: 'Your driver picks you up. Follow every update from My account.' },
+];
 
 export default function Home() {
   const data = useSiteData();
@@ -95,59 +99,49 @@ export default function Home() {
   const home = data.page('home');
   const about = data.page('about');
   const wa = contact.whatsappUrl();
-  const galleryItems = data.gallery('gallery').slice(0, 8);
+  const galleryItems = data.gallery('gallery').slice(0, 6);
   const mapUrl = data.settings?.map_embed_url;
-
-  const quick = 'card flex min-h-[72px] items-center gap-3 p-3.5 transition-colors hover:border-accent/50';
-  const quickIcon = 'grid h-11 w-11 shrink-0 place-items-center rounded-md bg-accent-soft text-accent-text';
 
   return (
     <>
       <Seo />
       {/* ---------- hero ---------- */}
-      <section className="bg-sunken/60 pb-28 pt-8 sm:pt-12 lg:pb-32">
-        <div className="container-page grid items-center gap-8 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
-          <div>
-            <h1 className="text-[34px] leading-[1.1] xs:text-4xl sm:text-5xl">{home?.heading || 'Reliable Travel. Comfortable Journeys.'}</h1>
-            <p className="mt-4 max-w-xl text-base leading-relaxed text-muted sm:text-[17px]">
+      <section className="relative isolate">
+        <HeroBackdrop items={data.gallery('landing')} />
+        <div className="container-page relative pb-32 pt-14 sm:pb-36 sm:pt-20 lg:pb-44 lg:pt-28">
+          <div className="max-w-2xl text-white">
+            <h1 className="text-[38px] font-semibold leading-[1.05] text-white xs:text-[44px] sm:text-6xl lg:text-[68px]">
+              {home?.heading || 'Reliable Travel. Comfortable Journeys.'}
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-white/85 sm:text-lg">
               {home?.body || 'Tours, travels and vehicle booking services.'}
             </p>
-            <div className="mt-6 flex flex-col gap-2.5 xs:flex-row">
-              <Link to="/book" className="btn-primary"><CalendarCheck className="h-4 w-4" aria-hidden />Book a Vehicle</Link>
-              <Link to="/packages" className="btn-secondary"><Map className="h-4 w-4" aria-hidden />Explore Packages</Link>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link to="/book" className="btn-primary min-h-12 px-6"><CalendarCheck className="h-4 w-4" aria-hidden />Book a Vehicle</Link>
+              <Link to="/instant-ride" className="btn min-h-12 border border-white/35 bg-white/10 px-6 text-white backdrop-blur hover:bg-white/20"><Zap className="h-4 w-4" aria-hidden />Instant Ride</Link>
             </div>
-            <div className="mt-4 flex flex-wrap gap-1">
-              {contact.telHref && <a href={contact.telHref} className="btn-ghost"><Phone className="h-4 w-4" aria-hidden />Call Now<span className="sr-only">: {contact.phone}</span></a>}
-              {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className="btn-ghost"><MessageCircle className="h-4 w-4" aria-hidden />WhatsApp</a>}
+            <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              {contact.telHref && <a href={contact.telHref} className="inline-flex min-h-11 items-center gap-2 text-white/85 hover:text-white"><Phone className="h-4 w-4" aria-hidden />Call {contact.phone}</a>}
+              {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 text-white/85 hover:text-white"><MessageCircle className="h-4 w-4" aria-hidden />Chat on WhatsApp</a>}
             </div>
           </div>
-          <HeroMedia items={data.gallery('landing')} />
         </div>
       </section>
 
-      {/* ---------- plan your journey ---------- */}
-      <section className="container-page -mt-20 lg:-mt-24" aria-label="Plan your journey">
-        <JourneyWidget />
-        <ul className="mt-4 grid grid-cols-1 gap-3 xs:grid-cols-2 lg:grid-cols-4">
-          <li><Link to="/book" className={quick}><span className={quickIcon}><CalendarCheck className="h-5 w-5" aria-hidden /></span><span className="min-w-0 flex-1"><span className="block text-sm font-semibold">Book a Vehicle</span><span className="block text-xs text-muted">Local or outstation travel</span></span><ArrowRight className="h-4 w-4 text-muted" aria-hidden /></Link></li>
-          <li><Link to="/instant-ride" className={quick}><span className={quickIcon}><Zap className="h-5 w-5" aria-hidden /></span><span className="min-w-0 flex-1"><span className="block text-sm font-semibold">Instant Ride</span><span className="block text-xs text-muted">Request a ride now</span></span><ArrowRight className="h-4 w-4 text-muted" aria-hidden /></Link></li>
-          {wa && <li><a href={wa} target="_blank" rel="noopener noreferrer" className={quick}><span className={quickIcon}><MessageCircle className="h-5 w-5" aria-hidden /></span><span className="min-w-0 flex-1"><span className="block text-sm font-semibold">WhatsApp</span><span className="block text-xs text-muted">Start a conversation</span></span><ArrowRight className="h-4 w-4 text-muted" aria-hidden /></a></li>}
-          {contact.telHref && <li><a href={contact.telHref} className={quick}><span className={quickIcon}><Phone className="h-5 w-5" aria-hidden /></span><span className="min-w-0 flex-1"><span className="block text-sm font-semibold">Call Now</span><span className="block truncate text-xs text-muted">{contact.phone}</span></span><ArrowRight className="h-4 w-4 text-muted" aria-hidden /></a></li>}
-        </ul>
+      {/* ---------- search ---------- */}
+      <section className="container-page -mt-24 sm:-mt-28" aria-label="Plan your journey">
+        <JourneySearch />
       </section>
 
       {data.error && <div className="container-page mt-10"><ErrorState message={data.error} onRetry={data.reload} /></div>}
 
       {/* ---------- fleet ---------- */}
-      <section className="container-page py-14 sm:py-20" aria-labelledby="fleet-heading">
-        <SectionBanner items={data.gallery('fleet')} />
-        <SectionHeading eyebrow="Our fleet" title="Travel in Comfort" intro="Choose a suitable vehicle for your journey. Final details and availability are confirmed on enquiry." />
+      <section className="container-page py-16 sm:py-24" aria-labelledby="fleet-heading">
+        <SectionHeading eyebrow="Our fleet" title="Choose your vehicle" intro="Sedans for small families, SUVs and travellers for groups. Availability and fare are confirmed when our office calls you."
+          action={data.vehicles.length > 3 ? <Link to="/vehicles" className="btn-secondary self-start sm:self-auto">All vehicles<ArrowRight className="h-4 w-4" aria-hidden /></Link> : undefined} />
         <span id="fleet-heading" className="sr-only">Our fleet</span>
         {data.loading ? <SkeletonGrid /> : data.vehicles.length ? (
-          <>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{data.vehicles.slice(0, 3).map((v) => <VehicleCard key={v.id} vehicle={v} />)}</div>
-            <div className="mt-8 text-center"><Link to="/vehicles" className="btn-secondary">View All Vehicles</Link></div>
-          </>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{data.vehicles.slice(0, 3).map((v) => <VehicleCard key={v.id} vehicle={v} />)}</div>
         ) : (
           <div className="card px-6 py-10 text-center">
             <h3 className="text-lg">Our vehicle list is being updated</h3>
@@ -158,156 +152,140 @@ export default function Home() {
       </section>
 
       {/* ---------- packages ---------- */}
-      <section className="border-y border-line bg-surface py-14 sm:py-20">
+      <section className="bg-surface py-16 sm:py-24">
         <div className="container-page">
-          <SectionBanner items={data.gallery('packages')} />
-          <SectionHeading eyebrow="Planned journeys" title="Explore Our Packages"
-            action={data.packages.length > 3 ? <Link to="/packages" className="btn-secondary self-start sm:self-auto">View All Packages</Link> : undefined} />
+          <SectionHeading eyebrow="Tour packages" title="Planned journeys"
+            intro="Devotional trips, hill stations and family tours, with the route and stops already planned."
+            action={data.packages.length > 3 ? <Link to="/packages" className="btn-secondary self-start sm:self-auto">All packages<ArrowRight className="h-4 w-4" aria-hidden /></Link> : undefined} />
           {data.loading ? <SkeletonGrid /> : data.packages.length ? (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{data.packages.slice(0, 3).map((p) => <PackageCard key={p.id} pkg={p} />)}</div>
           ) : (
-            <p className="card px-6 py-8 text-center text-sm text-muted">Packages will appear here once they are published by the travel team. For a custom journey, <Link to="/contact" className="link">contact us</Link>.</p>
+            <p className="card px-6 py-8 text-center text-sm text-muted">Packages will appear here once they are published. For a custom journey, <Link to="/contact" className="link">contact us</Link>.</p>
           )}
         </div>
       </section>
 
       {/* ---------- destinations ---------- */}
-      <section className="container-page py-14 sm:py-20">
-        <SectionBanner items={data.gallery('destinations')} />
-        <SectionHeading eyebrow="Places to explore" title="Destination showcase" intro="Browse destinations for pilgrimage, family and customized travel."
-          action={data.destinations.length > 4 ? <Link to="/destinations" className="btn-secondary self-start sm:self-auto">All Destinations</Link> : undefined} />
-        {data.loading ? <SkeletonGrid count={4} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4" /> : data.destinations.length ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{data.destinations.slice(0, 4).map((d) => <DestinationCard key={d.id} destination={d} />)}</div>
+      <section className="container-page py-16 sm:py-24">
+        <SectionHeading eyebrow="Destinations" title="Where our travellers go"
+          action={data.destinations.length > 4 ? <Link to="/destinations" className="btn-secondary self-start sm:self-auto">All destinations<ArrowRight className="h-4 w-4" aria-hidden /></Link> : undefined} />
+        {data.loading ? <SkeletonGrid count={4} className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4" /> : data.destinations.length ? (
+          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">{data.destinations.slice(0, 4).map((d) => <DestinationCard key={d.id} destination={d} />)}</div>
         ) : <p className="card px-6 py-8 text-center text-sm text-muted">Destinations will be listed here soon. We travel wherever your journey takes you — just ask.</p>}
       </section>
 
+      {/* ---------- how booking works ---------- */}
+      <section className="bg-inverse py-16 text-white sm:py-24" aria-labelledby="how-heading">
+        <div className="container-page">
+          <div className="mb-10 max-w-2xl">
+            <p className="mb-2 text-[13px] font-semibold text-[#ff8a90]">How booking works</p>
+            <h2 id="how-heading" className="text-[26px] leading-tight text-white sm:text-[36px]">From request to pickup, you always know where your booking stands.</h2>
+          </div>
+          <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {STEPS.map(({ Icon, title, body }, i) => (
+              <li key={title} className="relative rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                <div className="mb-4 flex items-center gap-3">
+                  <span className="grid h-10 w-10 place-items-center rounded-full bg-accent text-white"><Icon className="h-5 w-5" aria-hidden /></span>
+                  <span className="text-sm font-semibold text-white/50">Step {i + 1}</span>
+                </div>
+                <h3 className="text-lg text-white">{title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-white/70">{body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
       {/* ---------- offers ---------- */}
-      <section className="container-page pb-14 sm:pb-20" aria-labelledby="offers-heading">
-        {data.offers.length ? (
-          <>
-            <SectionHeading eyebrow="Current offers" title="Special Offers" />
-            <span id="offers-heading" className="sr-only">Offers</span>
-            <div className="grid gap-5 lg:grid-cols-2">
-              {data.offers.map((o) => (
-                <article key={o.id} className="card flex flex-col p-5 sm:p-6">
-                  <div><Badge tone="accent">{daysLeft(o.expires_on)} {daysLeft(o.expires_on) === 1 ? 'day' : 'days'} left</Badge></div>
-                  <h3 className="mt-3 text-xl">{o.title}</h3>
-                  {o.description && <p className="mt-1.5 text-sm text-muted">{o.description}</p>}
-                  <div className="mt-5 flex flex-col gap-2.5 xs:flex-row">
+      {data.offers.length > 0 && (
+        <section className="container-page pt-16 sm:pt-24" aria-labelledby="offers-heading">
+          <SectionHeading eyebrow="Current offers" title="Special offers" />
+          <span id="offers-heading" className="sr-only">Offers</span>
+          <div className="grid gap-5 lg:grid-cols-2">
+            {data.offers.map((o) => {
+              const left = daysLeft(o.expires_on);
+              return (
+                <article key={o.id} className="relative flex flex-col overflow-hidden rounded-2xl border border-accent/25 bg-accent-soft/50 p-5 sm:p-6">
+                  <Ticket aria-hidden className="absolute -right-4 -top-4 h-28 w-28 rotate-12 text-accent/10" />
+                  <p className="text-[13px] font-semibold text-accent-text">{left} {left === 1 ? 'day' : 'days'} left · until {formatDate(o.expires_on)}</p>
+                  <h3 className="mt-2 text-xl">{o.title}</h3>
+                  {o.description && <p className="mt-1.5 max-w-lg text-sm text-muted">{o.description}</p>}
+                  <div className="mt-5 flex flex-wrap gap-2.5">
                     <Link to="/book" className="btn-primary">Book Now</Link>
                     <Button variant="secondary" onClick={() => setEnquiry({ kind: 'offer', id: o.id, title: o.title })} icon={<MessageCircle className="h-4 w-4" aria-hidden />}>Enquire on WhatsApp</Button>
                   </div>
                 </article>
-              ))}
-            </div>
-          </>
-        ) : !data.loading && (
-          <div className="card flex flex-col items-start justify-between gap-5 p-5 sm:flex-row sm:items-center sm:p-8">
-            <div>
-              <p className="eyebrow mb-2">Current offers</p>
-              <h2 id="offers-heading" className="text-2xl">No offers available</h2>
-              <p className="mt-1.5 text-sm text-muted">There are currently no active offers.</p>
-              <Link to="/vehicles" className="btn-secondary mt-4">Explore services</Link>
-            </div>
-            <span className="hidden h-24 w-36 place-items-center rounded-lg bg-accent-soft text-accent-text sm:grid"><Ticket className="h-8 w-8" aria-hidden /></span>
+              );
+            })}
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
-      {/* ---------- instant ride ---------- */}
-      <section className="container-page pb-14 sm:pb-20">
-        <div className="flex flex-col items-start justify-between gap-5 rounded-xl bg-accent-strong p-6 text-white sm:flex-row sm:items-center sm:p-10">
+      {/* ---------- gallery + testimonials ---------- */}
+      <section className="container-page py-16 sm:py-24">
+        <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-14">
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-white/75">Instant ride</p>
-            <h2 className="text-2xl text-white sm:text-3xl">Need a Ride Now?</h2>
-            <p className="mt-2 max-w-xl text-sm text-white/85">Send a quick request with your name and number. Our office will follow up using the contact details you provide.</p>
+            <SectionHeading eyebrow="Gallery" title={data.page('gallery')?.heading || 'Moments from our journeys'}
+              action={galleryItems.length ? <Link to="/gallery" className="btn-secondary self-start sm:self-auto">View Gallery</Link> : undefined} />
+            {data.loading ? <SkeletonGrid count={4} className="grid grid-cols-2 gap-3" /> : galleryItems.length ? (
+              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {galleryItems.map((g, i) => (
+                  <li key={g.id} className={i === 0 ? 'col-span-2 row-span-2' : ''}>
+                    <Link to="/gallery" aria-label={g.caption || 'Open gallery'} className="block h-full overflow-hidden rounded-2xl">
+                      <ImageBox src={publicImageUrl('gallery-images', g.image_path)} alt={g.caption} opacity={g.opacity} ratio={i === 0 ? 'aspect-square sm:aspect-auto sm:h-full' : 'aspect-square'} className="h-full" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="card px-6 py-8 text-center text-sm text-muted">Photographs from our journeys will be added here.</p>}
           </div>
-          <Link to="/instant-ride" className="btn shrink-0 bg-inverse text-white hover:bg-black"><Zap className="h-4 w-4" aria-hidden />Request Instant Ride</Link>
+          <div>
+            <SectionHeading eyebrow="Reviews" title="What travellers say" />
+            {data.testimonials.length ? (
+              <ul className="flex flex-col gap-4">
+                {data.testimonials.slice(0, 3).map((t) => (
+                  <li key={t.id} className="card relative p-5">
+                    <Quote aria-hidden className="absolute right-4 top-4 h-8 w-8 text-accent/15" />
+                    <div className="flex gap-0.5 text-accent" role="img" aria-label={`${t.rating} out of 5 stars`}>
+                      {Array.from({ length: 5 }).map((_, i) => <Star key={i} className={`h-4 w-4 ${i < t.rating ? 'fill-current' : 'text-line'}`} aria-hidden />)}
+                    </div>
+                    <blockquote className="mt-3 text-[15px] leading-relaxed text-ink/85">{t.review}</blockquote>
+                    <p className="mt-3 text-sm font-semibold">{t.customer_name}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="card px-6 py-8 text-center text-sm text-muted">Reviews from our travellers will appear here once they are published.</p>}
+          </div>
         </div>
       </section>
 
-      {/* ---------- gallery ---------- */}
-      <section className="container-page pb-14 sm:pb-20">
-        <SectionHeading eyebrow="Gallery" title={data.page('gallery')?.heading || 'Moments From Our Journeys'}
-          action={galleryItems.length ? <Link to="/gallery" className="btn-secondary self-start sm:self-auto">View Gallery</Link> : undefined} />
-        {data.loading ? <SkeletonGrid count={4} className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4" /> : galleryItems.length ? (
-          <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {galleryItems.map((g) => (
-              <li key={g.id}><Link to="/gallery" aria-label={g.caption || 'Open gallery'} className="block">
-                <ImageBox src={publicImageUrl('gallery-images', g.image_path)} alt={g.caption} opacity={g.opacity} ratio="aspect-[4/3]" rounded="rounded-lg" className="border border-line" />
-              </Link></li>
-            ))}
-          </ul>
-        ) : <p className="card px-6 py-8 text-center text-sm text-muted">Photographs from our journeys will be added here.</p>}
-      </section>
-
-      {/* ---------- testimonials ---------- */}
-      <section className="container-page pb-14 sm:pb-20">
-        {data.testimonials.length ? (
-          <>
-            <SectionHeading eyebrow="Customer experiences" title="What Our Customers Say" />
-            <ul className="grid gap-5 md:grid-cols-3">
-              {data.testimonials.slice(0, 6).map((t) => (
-                <li key={t.id} className="card flex flex-col p-5">
-                  <div className="flex gap-0.5 text-accent" role="img" aria-label={`${t.rating} out of 5 stars`}>
-                    {Array.from({ length: 5 }).map((_, i) => <Star key={i} className={`h-4 w-4 ${i < t.rating ? 'fill-current' : 'text-line'}`} aria-hidden />)}
-                  </div>
-                  <blockquote className="mt-3 flex-1 text-sm leading-relaxed text-ink/85">{t.review}</blockquote>
-                  <p className="mt-4 text-sm font-semibold">{t.customer_name}</p>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : !data.loading && (
-          <div className="card grid gap-5 p-5 sm:p-8 md:grid-cols-[1fr_2fr] md:items-center">
-            <div>
-              <p className="eyebrow mb-2">Customer experiences</p>
-              <h2 className="text-2xl">Testimonials</h2>
-              <p className="mt-1.5 text-sm text-muted">Customer feedback will appear here once it is published.</p>
-            </div>
-            <div className="flex flex-col items-center rounded-lg bg-sunken px-6 py-8 text-center">
-              <MessageSquareDashed className="mb-2 h-6 w-6 text-muted" aria-hidden />
-              <p className="text-sm font-semibold">No testimonials published yet</p>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* ---------- about ---------- */}
-      <section className="border-t border-line bg-surface py-14 sm:py-20">
-        <div className="container-page grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
-          <ImageBox src={publicImageUrl('logos', data.settings?.logo_secondary_path)} alt={contact.companyName} placeholder="Team photo" ratio="aspect-[4/3]" rounded="rounded-xl" className="border border-line" />
-          <div>
+      {/* ---------- about + contact ---------- */}
+      <section className="bg-surface py-16 sm:py-24">
+        <div className="container-page grid gap-6 lg:grid-cols-2 lg:gap-8">
+          <div className="card flex flex-col p-6 sm:p-8">
             <p className="eyebrow mb-2">About us</p>
-            <h2 className="text-2xl sm:text-[32px] sm:leading-tight">{about?.heading || 'Travel With Confidence'}</h2>
+            <h2 className="text-[26px] leading-tight sm:text-[32px]">{about?.heading || 'Travel With Confidence'}</h2>
             {about?.body && <p className="mt-3 text-[15px] leading-relaxed text-muted">{about.body}</p>}
-            <ul className="mt-5 space-y-2.5">
-              {['Clear enquiry-based booking', 'Journey details reviewed before confirmation', 'Local, outstation, pilgrimage and customized travel', 'Support through call and WhatsApp'].map((t) => (
-                <li key={t} className="flex items-start gap-2.5 text-sm"><span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-success-soft text-success"><Check className="h-3 w-3" aria-hidden /></span>{t}</li>
+            <ul className="mt-6 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+              {['Booking reference for every request', 'Office confirms every trip by phone', 'Local, outstation and pilgrimage trips', 'Live updates in My account'].map((t) => (
+                <li key={t} className="flex items-start gap-2.5 text-sm"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden />{t}</li>
               ))}
             </ul>
-            <Link to="/about" className="btn-secondary mt-6">About Our Service</Link>
+            <div className="mt-auto flex flex-wrap gap-2.5 pt-8">
+              <Link to="/about" className="btn-secondary">About our service</Link>
+              <Link to="/contact" className="btn-dark">Send a message</Link>
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* ---------- contact ---------- */}
-      <section className="container-page py-14 sm:py-20">
-        <div className="grid gap-5 lg:grid-cols-[1fr_2fr]">
-          <div className="card p-5 sm:p-6">
-            <p className="eyebrow mb-2">Contact</p>
-            <h2 className="text-2xl">{data.page('contact')?.heading || 'Plan a journey with us'}</h2>
-            <ul className="mt-5 space-y-4 text-sm">
-              {contact.address && <li className="flex gap-3"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent-text" aria-hidden /><span><span className="block font-semibold">Address</span><span className="text-muted">{contact.address}</span></span></li>}
-              {contact.telHref && <li className="flex gap-3"><Phone className="mt-0.5 h-4 w-4 shrink-0 text-accent-text" aria-hidden /><span><span className="block font-semibold">Phone</span><a href={contact.telHref} className="text-muted hover:text-ink">{contact.phone}</a></span></li>}
-              {contact.email && <li className="flex gap-3"><Mail className="mt-0.5 h-4 w-4 shrink-0 text-accent-text" aria-hidden /><span className="min-w-0"><span className="block font-semibold">Email</span><a href={`mailto:${contact.email}`} className="break-all text-muted hover:text-ink">{contact.email}</a></span></li>}
-              {wa && <li className="flex gap-3"><MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-accent-text" aria-hidden /><span><span className="block font-semibold">WhatsApp</span><a href={wa} target="_blank" rel="noopener noreferrer" className="text-muted hover:text-ink">Chat with us</a></span></li>}
-            </ul>
-            <Link to="/contact" className="btn-primary mt-6">Send a Message</Link>
-          </div>
-          <div className="min-h-[300px] overflow-hidden rounded-lg border border-line bg-sunken">
-            {mapUrl ? <iframe title="Office location map" src={mapUrl} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" className="h-full min-h-[300px] w-full border-0" allowFullScreen />
-              : <div className="grid h-full min-h-[300px] place-items-center text-sm text-muted">Map will appear here once the office location is set.</div>}
+          <div className="card overflow-hidden">
+            <div className="grid gap-4 p-6 sm:grid-cols-2 sm:p-8">
+              {contact.address && <p className="flex gap-3 text-sm sm:col-span-2"><MapPin className="mt-0.5 h-5 w-5 shrink-0 text-accent-text" aria-hidden /><span><span className="block font-semibold">Office</span><span className="text-muted">{contact.address}</span></span></p>}
+              {contact.telHref && <a href={contact.telHref} className="flex gap-3 text-sm hover:text-accent-text"><Phone className="mt-0.5 h-5 w-5 shrink-0 text-accent-text" aria-hidden /><span><span className="block font-semibold">Phone</span><span className="text-muted">{contact.phone}</span></span></a>}
+              {contact.email && <a href={`mailto:${contact.email}`} className="flex min-w-0 gap-3 text-sm hover:text-accent-text"><Mail className="mt-0.5 h-5 w-5 shrink-0 text-accent-text" aria-hidden /><span className="min-w-0"><span className="block font-semibold">Email</span><span className="block break-all text-muted">{contact.email}</span></span></a>}
+            </div>
+            <div className="h-[260px] border-t border-line bg-sunken sm:h-[300px]">
+              {mapUrl ? <iframe title="Office location map" src={mapUrl} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" className="h-full w-full border-0" allowFullScreen />
+                : <div className="grid h-full place-items-center text-sm text-muted">Map will appear here once the office location is set.</div>}
+            </div>
           </div>
         </div>
       </section>

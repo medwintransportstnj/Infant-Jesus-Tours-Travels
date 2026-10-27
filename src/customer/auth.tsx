@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { isSupabaseConfigured, siteClient, timeoutSignal } from '@/lib/supabase';
-import { useToast } from '@/components/ui/Toast';
+import { forgetThisDevice } from '@/lib/push';
+import { useNotificationFeed } from '@/lib/useNotificationFeed';
 import { normalizeEmail } from '@/utils/phone';
 import type { CustomerNotification, Profile } from '@/types/db';
 
@@ -45,14 +46,11 @@ function toAccountError(error: { message?: string; status?: number; code?: strin
 }
 
 export function CustomerProvider({ children }: { children: ReactNode }) {
-  const toast = useToast();
   const [status, setStatus] = useState<Status>('loading');
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [notifications, setNotifications] = useState<CustomerNotification[]>([]);
   const [recovery, setRecovery] = useState(false);
-  const seen = useRef(new Set<string>());
 
   // ---- session: SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED, PASSWORD_RECOVERY and expiry all arrive here ----
   useEffect(() => {
@@ -61,7 +59,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     const apply = (user: { id: string; email?: string } | null) => {
       if (cancelled) return;
       setUserId(user?.id ?? null); setEmail(user?.email ?? null); setStatus(user ? 'signedIn' : 'signedOut');
-      if (!user) { setProfile(null); setNotifications([]); seen.current.clear(); setRecovery(false); }
+      if (!user) { setProfile(null); setRecovery(false); }
     };
     siteClient.auth.getSession().then(({ data }) => apply(data.session?.user ?? null)).catch(() => apply(null));
     const { data: sub } = siteClient.auth.onAuthStateChange((event, session) => {
@@ -72,39 +70,16 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ---- private data: loaded only for a signed-in customer; anonymous visitors make no such requests ----
-  const loadPrivate = useCallback(async (uid: string) => {
-    const [p, n] = await Promise.all([
-      siteClient.from('profiles').select('*').eq('id', uid).abortSignal(timeoutSignal()).maybeSingle(),
-      siteClient.from('customer_notifications').select('*').eq('customer_id', uid).order('created_at', { ascending: false }).limit(30).abortSignal(timeoutSignal()),
-    ]);
+  const loadProfile = useCallback(async (uid: string) => {
+    const p = await siteClient.from('profiles').select('*').eq('id', uid).abortSignal(timeoutSignal()).maybeSingle();
     if (p.error) console.error('[ijt] profile load failed', p.error); else setProfile(p.data as Profile | null);
-    if (n.error) console.error('[ijt] notifications load failed', n.error);
-    else { const list = (n.data ?? []) as CustomerNotification[]; list.forEach((x) => seen.current.add(x.id)); setNotifications(list); }
   }, []);
+  useEffect(() => { if (userId) void loadProfile(userId); }, [userId, loadProfile]);
 
-  useEffect(() => {
-    if (!userId) return;
-    void loadPrivate(userId);
-    // Realtime: one channel per signed-in customer, filtered to their rows (RLS enforces the same on the server).
-    const channel = siteClient
-      .channel(`customer-notifications-${userId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_notifications', filter: `customer_id=eq.${userId}` }, (payload) => {
-        const row = payload.new as CustomerNotification;
-        if (payload.eventType === 'INSERT' && row?.id) {
-          if (seen.current.has(row.id)) return;        // exactly one UI event per notification
-          seen.current.add(row.id);
-          setNotifications((list) => [row, ...list].slice(0, 30));
-          toast.info(row.title, row.body);
-        } else if (payload.eventType === 'UPDATE' && row?.id) {
-          setNotifications((list) => list.map((x) => (x.id === row.id ? row : x)));
-        }
-      })
-      .subscribe();
-    // Catch up after the tab was in the background or the connection dropped (not polling).
-    const onVisible = () => { if (document.visibilityState === 'visible') void loadPrivate(userId); };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => { document.removeEventListener('visibilitychange', onVisible); void siteClient.removeChannel(channel); };
-  }, [userId, loadPrivate, toast]);
+  // Own notifications, live: list + unread count + popup and chime (shared with staff and drivers).
+  const feed = useNotificationFeed<CustomerNotification>({
+    client: siteClient, table: 'customer_notifications', ownerColumn: 'customer_id', userId, linkFor: () => '/account',
+  });
 
   // ---- actions ----
   const signIn = useCallback(async (emailInput: string, password: string) => {
@@ -147,6 +122,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
   }, [register]);
 
   const signOut = useCallback(async () => {
+    await forgetThisDevice(siteClient);   // stop this device's notifications for this customer (needs the session)
     const { error } = await siteClient.auth.signOut();
     if (error) { console.error('[ijt] customer sign-out failed', error); await siteClient.auth.signOut({ scope: 'local' }); }
   }, []);
@@ -170,22 +146,11 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     setRecovery(false);
   }, []);
 
-  const markRead = useCallback(async (id: string) => {
-    setNotifications((list) => list.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
-    const { error } = await siteClient.from('customer_notifications').update({ is_read: true }).eq('id', id);
-    if (error) console.error('[ijt] mark read failed', error);
-  }, []);
-  const markAllRead = useCallback(async () => {
-    if (!userId) return;
-    setNotifications((list) => list.map((n) => ({ ...n, is_read: true })));
-    const { error } = await siteClient.from('customer_notifications').update({ is_read: true }).eq('customer_id', userId).eq('is_read', false);
-    if (error) console.error('[ijt] mark all read failed', error);
-  }, [userId]);
-
   const value = useMemo<CustomerCtx>(() => ({
-    status, userId, email, profile, notifications, unread: notifications.filter((n) => !n.is_read).length, recovery,
-    signIn, register, ensureAccount, signOut, updateProfile, requestPasswordReset, setNewPassword, markRead, markAllRead,
-  }), [status, userId, email, profile, notifications, recovery, signIn, register, ensureAccount, signOut, updateProfile, requestPasswordReset, setNewPassword, markRead, markAllRead]);
+    status, userId, email, profile, notifications: feed.items, unread: feed.unread, recovery,
+    signIn, register, ensureAccount, signOut, updateProfile, requestPasswordReset, setNewPassword,
+    markRead: feed.markRead, markAllRead: feed.markAllRead,
+  }), [status, userId, email, profile, feed.items, feed.unread, feed.markRead, feed.markAllRead, recovery, signIn, register, ensureAccount, signOut, updateProfile, requestPasswordReset, setNewPassword]);
   return <CustomerContext.Provider value={value}>{children}</CustomerContext.Provider>;
 }
 

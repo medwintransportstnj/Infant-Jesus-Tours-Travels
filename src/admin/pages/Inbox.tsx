@@ -118,7 +118,7 @@ export function Notifications() {
                   <p className="text-[13px] text-muted">{n.body}</p>
                   <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
                     {timeAgo(n.created_at)}
-                    {(n.kind === 'booking' || n.kind === 'status') && <Link className="link" to={`/admin/bookings?q=${encodeURIComponent(n.title.split('· ')[1] ?? '')}`}>View Booking</Link>}
+                    {(n.kind === 'booking' || n.kind === 'status' || n.kind === 'assignment') && <Link className="link" to={`/admin/bookings?q=${encodeURIComponent(n.title.split('· ')[1] ?? '')}`}>View Booking</Link>}
                     {n.kind === 'message' && <Link className="link" to="/admin/contacts">View Message</Link>}
                   </p>
                 </div>
